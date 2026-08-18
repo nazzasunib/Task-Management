@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Momentum — Daily Task Tracker</title>
+<title>Task Management — Daily Task Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
@@ -275,6 +275,40 @@ function IconButton({ icon, onClick, label, className = '', size = 17 }) {
     </button>
   );
 }
+function Avatar({ user, size = 36, ring = false }) {
+  const cls = `rounded-full object-cover shrink-0 ${ring ? 'ring-2 ring-purpleLight/40' : ''}`;
+  if (user && user.avatar) {
+    return <img src={user.avatar} alt={user.name || 'Profile photo'} style={{ width: size, height: size }} className={cls} />;
+  }
+  const initial = (user && user.name || '?').trim().charAt(0).toUpperCase();
+  return (
+    <div style={{ width: size, height: size }} className={`rounded-full bg-purpleLight/25 text-purple font-display font-bold flex items-center justify-center shrink-0 ${ring ? 'ring-2 ring-purpleLight/40' : ''}`}>
+      <span style={{ fontSize: size * 0.4 }}>{initial}</span>
+    </div>
+  );
+}
+// Shrinks an uploaded photo client-side before it goes into localStorage.
+function resizeImageFile(file, maxSize = 240) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height) { if (width > maxSize) { height = Math.round(height * (maxSize / width)); width = maxSize; } }
+        else { if (height > maxSize) { width = Math.round(width * (maxSize / height)); height = maxSize; } }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => reject(new Error('Could not read that image.'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('Could not read that file.'));
+    reader.readAsDataURL(file);
+  });
+}
 function EmptyState({ icon = 'sparkle', title, subtitle }) {
   return (
     <div className="flex flex-col items-center justify-center text-center py-16 px-6">
@@ -512,7 +546,7 @@ function TaskFormModal({ open, onClose, onSubmit, initial, defaultDate, taskCoun
         <div className="flex gap-3 mt-6">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-line text-ink font-medium text-sm hover:bg-slate-50 transition-colors">Cancel</button>
           <button onClick={submit} className="flex-1 py-2.5 rounded-xl bg-purple text-white font-medium text-sm hover:bg-purple/90 transition-colors shadow-card">
-            {initial ? 'Save Changes' : 'Add Task'}fffff
+            {initial ? 'Save Changes' : 'Add Task'}
           </button>
         </div>
       </div>
@@ -652,7 +686,7 @@ function AuthPage({ onAuth }) {
         <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-purpleLight/10 blur-3xl" />
         <div className="flex items-center gap-2.5 relative">
           <div className="w-9 h-9 rounded-lg bg-purple flex items-center justify-center shrink-0"><Icon name="checkSquare" size={18} className="text-white" /></div>
-          <span className="font-display font-bold text-xl tracking-tight">Momentum</span>
+          <span className="font-display font-bold text-xl tracking-tight">Task Management</span>
         </div>
         <div className="relative">
           <p className="font-display font-bold text-3xl leading-tight mb-4">Nothing you plan for<br />today gets lost tomorrow.</p>
@@ -664,7 +698,7 @@ function AuthPage({ onAuth }) {
         <div className="w-full max-w-sm">
           <div className="md:hidden flex items-center gap-2.5 mb-8">
             <div className="w-9 h-9 rounded-lg bg-purple flex items-center justify-center"><Icon name="checkSquare" size={18} className="text-white" /></div>
-            <span className="font-display font-bold text-xl text-ink">Momentum</span>
+            <span className="font-display font-bold text-xl text-ink">Task Management</span>
           </div>
           <h1 className="font-display font-bold text-2xl text-ink mb-1">{mode === 'login' ? 'Welcome back' : 'Create your account'}</h1>
           <p className="text-sm text-slateText mb-6">{mode === 'login' ? 'Log in to keep your tasks moving.' : 'Sign up to start tracking your day.'}</p>
@@ -712,7 +746,7 @@ function Sidebar({ view, setView, collapsed, setCollapsed, mobileOpen, setMobile
           <div className="w-8 h-8 rounded-lg bg-purple flex items-center justify-center shrink-0">
             <Icon name="checkSquare" size={16} className="text-white" />
           </div>
-          {!collapsed && <span className="font-display font-bold text-[17px] tracking-tight">Momentum</span>}
+          {!collapsed && <span className="font-display font-bold text-[14.5px] leading-tight tracking-tight truncate">Task Management</span>}
         </div>
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto scrollbar-none">
           {NAV_ITEMS.map(item => {
@@ -732,9 +766,7 @@ function Sidebar({ view, setView, collapsed, setCollapsed, mobileOpen, setMobile
           {!collapsed && 'Collapse'}
         </button>
         <div className="border-t border-white/10 p-4 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-purpleLight/30 flex items-center justify-center shrink-0">
-            <Icon name="user" size={16} className="text-purpleLight" />
-          </div>
+          <Avatar user={user} size={36} />
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold truncate">{user.name}</p>
@@ -798,7 +830,7 @@ function NotificationDropdown({ tasks, reminders = [] }) {
     </div>
   );
 }
-function Header({ view, onOpenMobile, searchQuery, setSearchQuery, tasks, reminders }) {
+function Header({ view, onOpenMobile, searchQuery, setSearchQuery, tasks, reminders, user, onGoSettings }) {
   const titleMap = { dashboard: 'Dashboard', today: "Today's Tasks", all: 'All Tasks', calendar: 'Calendar', completed: 'Completed Tasks', pending: 'Pending Tasks', settings: 'Settings' };
   const [mobileSearch, setMobileSearch] = useState(false);
   return (
@@ -823,7 +855,9 @@ function Header({ view, onOpenMobile, searchQuery, setSearchQuery, tasks, remind
         </div>
         <button onClick={() => setMobileSearch(s => !s)} className="md:hidden p-2.5 rounded-xl text-slateText hover:bg-slate-100"><Icon name="search" size={18} /></button>
         <NotificationDropdown tasks={tasks} reminders={reminders} />
-        <div className="w-9 h-9 rounded-full bg-navy text-white flex items-center justify-center"><Icon name="user" size={16} /></div>
+        <button onClick={onGoSettings} title="My Profile" className="rounded-full hover:ring-2 hover:ring-purpleLight/40 transition-all">
+          <Avatar user={user} size={36} />
+        </button>
       </div>
     </header>
   );
@@ -1152,22 +1186,117 @@ function PendingPage({ tasks, searchQuery, ...handlers }) {
   );
 }
 
-function SettingsPage({ tasks, onClearAll, user, onLogout }) {
+function ProfileCard({ user, onUpdateUser }) {
+  const fileRef = useRef(null);
+  const [name, setName] = useState(user.name);
+  const [email, setEmail] = useState(user.email);
+  const [about, setAbout] = useState(user.about || '');
+  const [error, setError] = useState('');
+  const [saved, setSaved] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const pickPhoto = () => fileRef.current && fileRef.current.click();
+  const onPhoto = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setError('Choose an image file for your photo.'); return; }
+    setUploading(true); setError('');
+    try {
+      const dataUrl = await resizeImageFile(file, 240);
+      onUpdateUser({ avatar: dataUrl });
+    } catch (err) { setError('Could not process that photo — try a different file.'); }
+    setUploading(false);
+  };
+  const removePhoto = () => onUpdateUser({ avatar: null });
+
+  const save = () => {
+    setError(''); setSaved(false);
+    if (!name.trim() || !email.trim()) { setError('Name and email can\'t be empty.'); return; }
+    const cleanEmail = email.trim().toLowerCase();
+    if (cleanEmail !== user.email) {
+      const clash = loadUsers().some(u => u.id !== user.id && u.email === cleanEmail);
+      if (clash) { setError('Another account already uses that email.'); return; }
+    }
+    onUpdateUser({ name: name.trim(), email: cleanEmail, about: about.trim() });
+    setSaved(true);
+  };
+
+  return (
+    <div className="bg-white border border-line rounded-2xl p-5 shadow-card">
+      <h3 className="font-display font-semibold text-ink mb-4">My Profile</h3>
+      <div className="flex items-center gap-4 mb-5">
+        <Avatar user={user} size={64} ring />
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <button onClick={pickPhoto} disabled={uploading} className="text-sm font-medium px-3.5 py-2 rounded-xl bg-purple text-white hover:bg-purple/90 disabled:opacity-60">
+              {uploading ? 'Uploading…' : 'Upload Photo'}
+            </button>
+            {user.avatar && (
+              <button onClick={removePhoto} className="text-sm font-medium px-3.5 py-2 rounded-xl border border-line text-ink hover:bg-slate-50">Remove</button>
+            )}
+          </div>
+          <p className="text-[11px] text-slateText">JPG or PNG, resized automatically to keep things fast.</p>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPhoto} />
+        </div>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-4 mb-4">
+        <Field label="Full Name"><input className={inputCls} value={name} onChange={e => setName(e.target.value)} /></Field>
+        <Field label="Email"><input type="email" className={inputCls} value={email} onChange={e => setEmail(e.target.value)} /></Field>
+      </div>
+      <Field label="About (optional)">
+        <textarea className={inputCls} rows={2} placeholder="Role, team, or a short note about you…" value={about} onChange={e => setAbout(e.target.value)} />
+      </Field>
+      {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
+      {saved && !error && <p className="text-sm text-emerald-600 mt-3">Profile saved.</p>}
+      <button onClick={save} className="mt-4 px-4 py-2.5 rounded-xl bg-purple text-white text-sm font-semibold hover:bg-purple/90 shadow-card">Save Profile</button>
+    </div>
+  );
+}
+
+function ChangePasswordCard({ user, onUpdateUser }) {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  const save = () => {
+    setError(''); setSaved(false);
+    if (obfuscate(current) !== user.password) { setError('Current password is incorrect.'); return; }
+    if (next.length < 4) { setError('New password should be at least 4 characters.'); return; }
+    if (next !== confirm) { setError('New passwords do not match.'); return; }
+    onUpdateUser({ password: obfuscate(next) });
+    setCurrent(''); setNext(''); setConfirm(''); setSaved(true);
+  };
+
+  return (
+    <div className="bg-white border border-line rounded-2xl p-5 shadow-card">
+      <h3 className="font-display font-semibold text-ink mb-1">Change Password</h3>
+      <p className="text-sm text-slateText mb-4">Choose a new password for your account.</p>
+      <div className="space-y-3 max-w-sm">
+        <Field label="Current Password"><input type="password" className={inputCls} value={current} onChange={e => setCurrent(e.target.value)} placeholder="••••••••" /></Field>
+        <Field label="New Password"><input type="password" className={inputCls} value={next} onChange={e => setNext(e.target.value)} placeholder="••••••••" /></Field>
+        <Field label="Confirm New Password"><input type="password" className={inputCls} value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="••••••••" /></Field>
+      </div>
+      {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
+      {saved && !error && <p className="text-sm text-emerald-600 mt-3">Password updated.</p>}
+      <button onClick={save} className="mt-4 px-4 py-2.5 rounded-xl bg-purple text-white text-sm font-semibold hover:bg-purple/90 shadow-card">Update Password</button>
+    </div>
+  );
+}
+
+function SettingsPage({ tasks, onClearAll, user, onLogout, onUpdateUser }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const total = tasks.length;
   const completed = tasks.filter(t => t.status === 'completed').length;
   return (
     <div className="max-w-2xl space-y-5">
-      <div className="bg-white border border-line rounded-2xl p-5 shadow-card">
-        <h3 className="font-display font-semibold text-ink mb-1">Account</h3>
-        <p className="text-sm text-slateText mb-4">Signed in as <span className="font-medium text-ink">{user.name}</span> ({user.email}).</p>
-        <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-line text-ink text-sm font-medium hover:bg-slate-50">
-          <Icon name="arrowRight" size={15} /> Log Out
-        </button>
-      </div>
+      <ProfileCard user={user} onUpdateUser={onUpdateUser} />
+      <ChangePasswordCard user={user} onUpdateUser={onUpdateUser} />
       <div className="bg-white border border-line rounded-2xl p-5 shadow-card">
         <h3 className="font-display font-semibold text-ink mb-1">Appearance</h3>
-        <p className="text-sm text-slateText mb-4">Momentum uses a fixed Royal Navy &amp; Purple identity for a consistent, professional look.</p>
+        <p className="text-sm text-slateText mb-4">Task Management uses a fixed Royal Navy &amp; Purple identity for a consistent, professional look.</p>
         <div className="flex gap-3">
           {[{ c: '#0B1F3A', l: 'Navy' }, { c: '#7C3AED', l: 'Purple' }, { c: '#A78BFA', l: 'Light Purple' }, { c: '#F8FAFC', l: 'Background' }].map(s => (
             <div key={s.l} className="flex flex-col items-center gap-1.5">
@@ -1179,14 +1308,19 @@ function SettingsPage({ tasks, onClearAll, user, onLogout }) {
       </div>
       <div className="bg-white border border-line rounded-2xl p-5 shadow-card">
         <h3 className="font-display font-semibold text-ink mb-1">Your Data</h3>
-        <p className="text-sm text-slateText mb-4">{total} tasks stored locally in this browser · {completed} completed. Momentum keeps working offline and never loses data on refresh.</p>
-        <button onClick={() => setConfirmOpen(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50">
-          <Icon name="trash" size={15} /> Clear All Data
-        </button>
+        <p className="text-sm text-slateText mb-4">{total} tasks stored locally in this browser · {completed} completed. Task Management keeps working offline and never loses data on refresh.</p>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => setConfirmOpen(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50">
+            <Icon name="trash" size={15} /> Clear All Data
+          </button>
+          <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-line text-ink text-sm font-medium hover:bg-slate-50">
+            <Icon name="arrowRight" size={15} /> Log Out
+          </button>
+        </div>
       </div>
       <div className="bg-white border border-line rounded-2xl p-5 shadow-card">
         <h3 className="font-display font-semibold text-ink mb-1">About</h3>
-        <p className="text-sm text-slateText leading-relaxed">Momentum automatically carries unfinished tasks forward to the next day, so nothing quietly falls through the cracks. Tasks you schedule for a future date stay put until that day arrives.</p>
+        <p className="text-sm text-slateText leading-relaxed">Task Management automatically carries unfinished tasks forward to the next day, so nothing quietly falls through the cracks. Tasks you schedule for a future date stay put until that day arrives.</p>
       </div>
       <ConfirmDialog open={confirmOpen} title="Clear all data?" message="This permanently deletes every task stored in this browser. This can't be undone."
         confirmLabel="Delete Everything" danger onCancel={() => setConfirmOpen(false)} onConfirm={() => { onClearAll(); setConfirmOpen(false); }} />
@@ -1195,7 +1329,7 @@ function SettingsPage({ tasks, onClearAll, user, onLogout }) {
 }
 
 /* ======================= APP ======================= */
-function Workspace({ user, onLogout }) {
+function Workspace({ user, onLogout, onUpdateUser }) {
   const [tasks, setTasks] = useState(() => {
     const loaded = loadTasks(user.id);
     const { tasks: rolled } = runRollover(loaded, user.id);
@@ -1316,7 +1450,7 @@ function Workspace({ user, onLogout }) {
     <div className="flex h-screen overflow-hidden bg-bg font-body">
       <Sidebar view={view} setView={setView} collapsed={collapsed} setCollapsed={setCollapsed} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} user={user} onLogout={onLogout} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header view={view} onOpenMobile={() => setMobileOpen(true)} searchQuery={searchQuery} setSearchQuery={setSearchQuery} tasks={tasks} reminders={reminders} />
+        <Header view={view} onOpenMobile={() => setMobileOpen(true)} searchQuery={searchQuery} setSearchQuery={setSearchQuery} tasks={tasks} reminders={reminders} user={user} onGoSettings={() => setView('settings')} />
         <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
           {(view === 'dashboard' || view === 'today') && (
             <DateTaskPage mode={view} tasks={tasks} selectedDate={selectedDate} setSelectedDate={setSelectedDate}
@@ -1326,7 +1460,7 @@ function Workspace({ user, onLogout }) {
           {view === 'calendar' && <CalendarPage tasks={tasks} taskCounts={taskCounts} onOpenAdd={openAdd} {...handlers} />}
           {view === 'completed' && <CompletedPage tasks={tasks} searchQuery={searchQuery} {...handlers} />}
           {view === 'pending' && <PendingPage tasks={tasks} searchQuery={searchQuery} {...handlers} />}
-          {view === 'settings' && <SettingsPage tasks={tasks} onClearAll={clearAll} user={user} onLogout={onLogout} />}
+          {view === 'settings' && <SettingsPage tasks={tasks} onClearAll={clearAll} user={user} onLogout={onLogout} onUpdateUser={onUpdateUser} />}
         </main>
       </div>
 
@@ -1350,9 +1484,17 @@ function App() {
 
   const handleAuth = (user) => setCurrentUser(user);
   const handleLogout = () => { clearSession(); setCurrentUser(null); };
+  const handleUpdateUser = (patch) => {
+    setCurrentUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...patch };
+      saveUsers(loadUsers().map(u => u.id === updated.id ? updated : u));
+      return updated;
+    });
+  };
 
   if (!currentUser) return <AuthPage onAuth={handleAuth} />;
-  return <Workspace key={currentUser.id} user={currentUser} onLogout={handleLogout} />;
+  return <Workspace key={currentUser.id} user={currentUser} onLogout={handleLogout} onUpdateUser={handleUpdateUser} />;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
