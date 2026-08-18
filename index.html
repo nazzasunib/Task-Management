@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Momentum — Daily Task Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          navy: '#0B1F3A',
+          navyDeep: '#102A43',
+          purple: '#7C3AED',
+          purpleLight: '#A78BFA',
+          bg: '#F8FAFC',
+          ink: '#111827',
+          slateText: '#64748B',
+          line: '#E2E8F0',
+        },
+        fontFamily: {
+          display: ['"Plus Jakarta Sans"', 'sans-serif'],
+          body: ['Inter', 'sans-serif'],
+        },
+        boxShadow: {
+          card: '0 1px 2px rgba(11,31,58,0.04), 0 4px 16px rgba(11,31,58,0.05)',
+          pop: '0 12px 32px rgba(11,31,58,0.16)',
+        },
+        borderRadius: { '2xl': '1rem', '3xl': '1.5rem' },
+      },
+    },
+  };
+</script>
+<style>
+  * { -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: #F8FAFC; }
+  body { font-family: 'Inter', sans-serif; color: #111827; }
+  .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2px solid #7C3AED; outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
+  }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none { scrollbar-width: none; }
+  @keyframes pop-in { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .animate-pop { animation: pop-in .16s ease-out; }
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+  .animate-fade { animation: fade-in .15s ease-out; }
+  @keyframes check-pop { 0% { transform: scale(0.6); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+  .animate-check { animation: check-pop .25s cubic-bezier(.34,1.56,.64,1); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef, useCallback, Fragment } = React;
+
+/* ======================= ICONS ======================= */
+const ICON_PATHS = {
+  home: <><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></>,
+  checkSquare: <><rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 3 3 5-6"/></>,
+  list: <><path d="M9 6h12"/><path d="M9 12h12"/><path d="M9 18h12"/><path d="M4 6h.01"/><path d="M4 12h.01"/><path d="M4 18h.01"/></>,
+  calendar: <><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M16 2.5v4"/><path d="M8 2.5v4"/><path d="M3 10h18"/></>,
+  checkCircle: <><circle cx="12" cy="12" r="9"/><path d="m8.5 12.3 2.4 2.4 4.6-5.4"/></>,
+  clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5l3.2 2.2"/></>,
+  settings: <><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.8 1.8 0 0 0 .35 2l.05.05a2 2 0 1 1-2.85 2.8l-.1-.1a1.8 1.8 0 0 0-2-.35 1.8 1.8 0 0 0-1.1 1.65V21a2 2 0 1 1-4 0v-.1a1.8 1.8 0 0 0-1.15-1.6 1.8 1.8 0 0 0-2 .35l-.05.05a2 2 0 1 1-2.85-2.8l.05-.05a1.8 1.8 0 0 0 .35-2 1.8 1.8 0 0 0-1.65-1.1H3a2 2 0 1 1 0-4h.1A1.8 1.8 0 0 0 4.75 9.6a1.8 1.8 0 0 0-.35-2l-.05-.1a2 2 0 1 1 2.85-2.8l.1.1a1.8 1.8 0 0 0 2 .35H9.6A1.8 1.8 0 0 0 10.7 3.6V3.5a2 2 0 1 1 4 0v.1c.02.7.42 1.34 1.05 1.65.65.32 1.42.24 2-.2l.1-.1a2 2 0 1 1 2.85 2.85l-.1.1c-.44.55-.52 1.32-.2 2v.1c.32.63.96 1.03 1.65 1.05H21a2 2 0 1 1 0 4h-.1c-.7.02-1.34.42-1.65 1.05Z"/></>,
+  plus: <><path d="M12 5v14"/><path d="M5 12h14"/></>,
+  search: <><circle cx="11" cy="11" r="7.5"/><path d="m21 21-4.4-4.4"/></>,
+  bell: <><path d="M6 8.5a6 6 0 0 1 12 0c0 5 2.2 6.5 2.2 6.5H3.8S6 13.5 6 8.5Z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></>,
+  chevronLeft: <path d="m15 18-6-6 6-6"/>,
+  chevronRight: <path d="m9 18 6-6-6-6"/>,
+  chevronDown: <path d="m6 9 6 6 6-6"/>,
+  x: <><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>,
+  trash: <><path d="M4 7h16"/><path d="M9 7V4.8a1.8 1.8 0 0 1 1.8-1.8h2.4A1.8 1.8 0 0 1 15 4.8V7"/><path d="m18.5 7-.8 12.2a2 2 0 0 1-2 1.8H8.3a2 2 0 0 1-2-1.8L5.5 7"/><path d="M10 11.2v5.6"/><path d="M14 11.2v5.6"/></>,
+  edit: <><path d="M12.5 19.5H21"/><path d="M16.7 3.3a2.1 2.1 0 0 1 3 3L8.5 17.5l-4.2 1 1-4.2Z"/></>,
+  rotate: <><path d="M21 12a9 9 0 1 1-3.2-6.9"/><path d="M21 3v6h-6"/></>,
+  menu: <><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></>,
+  trend: <><path d="M3 16.5 9.5 10l4 4L21 6.5"/><path d="M15 6.5h6v6"/></>,
+  layers: <><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 13 9 5 9-5"/></>,
+  user: <><circle cx="12" cy="8.5" r="3.5"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></>,
+  arrowRight: <><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></>,
+  info: <><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5h.01"/></>,
+  sparkle: <path d="m12 2 1.8 5.6L19.5 9l-5.7 1.6L12 16l-1.8-5.4L4.5 9l5.7-1.4L12 2Z"/>,
+  target: <><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.9" fill="currentColor"/></>,
+};
+function Icon({ name, size = 18, className = '', strokeWidth = 2 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      {ICON_PATHS[name] || null}
+    </svg>
+  );
+}
+
+/* ======================= DATE UTILS ======================= */
+const pad = n => String(n).padStart(2, '0');
+const toKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const todayKey = () => toKey(new Date());
+const addDays = (key, n) => { const d = parseKey(key); d.setDate(d.getDate() + n); return toKey(d); };
+const daysDiff = (a, b) => Math.round((parseKey(b) - parseKey(a)) / 86400000);
+const fmtLong = key => parseKey(key).toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const fmtShort = key => parseKey(key).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+const fmtMed = key => parseKey(key).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+const monthLabel = (y, m) => new Date(y, m, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2));
+const fmtTime = t => {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const d = new Date(); d.setHours(h, m, 0, 0);
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+};
+
+/* ======================= CONSTANTS ======================= */
+const CATEGORIES = ['Work', 'Personal', 'Meeting', 'Design', 'Marketing', 'Development', 'Other'];
+const PRIORITIES = ['Low', 'Medium', 'High'];
+const NAV_ITEMS = [
+  { key: 'dashboard', label: 'Dashboard', icon: 'home' },
+  { key: 'today', label: "Today's Tasks", icon: 'checkSquare' },
+  { key: 'all', label: 'All Tasks', icon: 'list' },
+  { key: 'calendar', label: 'Calendar', icon: 'calendar' },
+  { key: 'completed', label: 'Completed', icon: 'checkCircle' },
+  { key: 'pending', label: 'Pending', icon: 'clock' },
+  { key: 'settings', label: 'Settings', icon: 'settings' },
+];
+
+/* ======================= AUTH (local demo only) =======================
+   There is no backend here — accounts, sessions and passwords all live in
+   this browser's localStorage. It's enough to gate access and keep each
+   signed-in person's tasks separate, but it is NOT secure storage: don't
+   reuse a real password when trying this out. */
+const USERS_KEY = 'momentum.users.v1';
+const SESSION_KEY = 'momentum.session.v1';
+const obfuscate = pw => btoa(unescape(encodeURIComponent(pw)));
+function loadUsers() { try { return JSON.parse(localStorage.getItem(USERS_KEY)) || []; } catch (e) { return []; } }
+function saveUsers(list) { localStorage.setItem(USERS_KEY, JSON.stringify(list)); }
+function loadSession() { return localStorage.getItem(SESSION_KEY); }
+function saveSession(userId) { localStorage.setItem(SESSION_KEY, userId); }
+function clearSession() { localStorage.removeItem(SESSION_KEY); }
+
+/* ======================= STORAGE + ROLLOVER ======================= */
+const tasksKey = userId => `momentum.tasks.${userId}.v1`;
+const checkKey = userId => `momentum.lastcheck.${userId}.v1`;
+const notifiedKey = userId => `momentum.notified.${userId}.v1`;
+
+function makeTask(overrides) {
+  const date = overrides.date || todayKey();
+  return {
+    id: uid(),
+    title: '',
+    description: '',
+    category: 'Work',
+    priority: 'Medium',
+    estimatedTime: '',
+    dueTime: '',
+    originalDate: date,
+    currentDate: date,
+    status: 'pending',
+    isRolledOver: false,
+    rolloverCount: 0,
+    createdAt: new Date().toISOString(),
+    completedAt: null,
+    ...overrides,
+  };
+}
+
+function seedTasks() {
+  const today = todayKey();
+  const yesterday = addDays(today, -1);
+  const future = addDays(today, 5);
+  return [
+    makeTask({ title: 'Prepare Green University seminar certificate', category: 'Work', priority: 'High', date: today, status: 'completed', completedAt: new Date().toISOString() }),
+    makeTask({ title: 'Send HR onboarding email', category: 'Work', priority: 'Medium', date: today, status: 'completed', completedAt: new Date().toISOString() }),
+    makeTask({ title: 'Update quarterly presentation', category: 'Work', priority: 'Medium', date: today, status: 'completed', completedAt: new Date().toISOString() }),
+    makeTask({ title: 'Prepare seminar documents', description: 'Print handouts and attendance sheets for the seminar.', category: 'Work', priority: 'High', date: today }),
+    makeTask({ title: 'Design social media post', category: 'Marketing', priority: 'Low', date: today, estimatedTime: '45 min' }),
+    makeTask({ title: 'Review pull requests', category: 'Development', priority: 'Medium', date: yesterday, originalDate: yesterday, currentDate: today, isRolledOver: true, rolloverCount: 1 }),
+    makeTask({ title: 'Prepare final presentation', description: 'Client-facing deck for the board meeting.', category: 'Design', priority: 'High', date: future }),
+    makeTask({ title: 'Team retro notes', category: 'Meeting', priority: 'Low', date: future }),
+  ];
+}
+
+function loadTasks(userId) {
+  try {
+    const raw = localStorage.getItem(tasksKey(userId));
+    if (raw) return JSON.parse(raw);
+    const seeded = seedTasks();
+    localStorage.setItem(tasksKey(userId), JSON.stringify(seeded));
+    return seeded;
+  } catch (e) { return seedTasks(); }
+}
+function persistTasks(tasks, userId) {
+  try { localStorage.setItem(tasksKey(userId), JSON.stringify(tasks)); } catch (e) {}
+}
+// Rolls forward any unfinished task whose current due date is before today.
+// Guarded by a per-user check-key so re-opening the app the same day never double-rolls.
+function runRollover(tasks, userId) {
+  const today = todayKey();
+  const lastCheck = localStorage.getItem(checkKey(userId));
+  if (lastCheck === today) return { tasks, changed: false };
+  let changed = false;
+  const updated = tasks.map(t => {
+    if (t.status !== 'completed' && t.currentDate < today) {
+      changed = true;
+      const diff = daysDiff(t.currentDate, today);
+      return { ...t, currentDate: today, isRolledOver: true, rolloverCount: t.rolloverCount + diff };
+    }
+    return t;
+  });
+  localStorage.setItem(checkKey(userId), today);
+  return { tasks: updated, changed };
+}
+function loadNotified(userId) {
+  try {
+    const raw = JSON.parse(localStorage.getItem(notifiedKey(userId)));
+    if (raw && raw.date === todayKey()) return new Set(raw.ids);
+    return new Set();
+  } catch (e) { return new Set(); }
+}
+function saveNotified(userId, set) {
+  localStorage.setItem(notifiedKey(userId), JSON.stringify({ date: todayKey(), ids: [...set] }));
+}
+
+/* ======================= SMALL UI ATOMS ======================= */
+function PriorityBadge({ priority }) {
+  const styles = {
+    High: 'bg-purple text-white',
+    Medium: 'bg-purpleLight/20 text-purple border border-purpleLight/40',
+    Low: 'bg-slate-100 text-slateText',
+  };
+  return <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${styles[priority] || styles.Low}`}>{priority}</span>;
+}
+function CategoryBadge({ category }) {
+  return <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-navy/5 text-navy whitespace-nowrap">{category}</span>;
+}
+function ProgressBar({ value, className = '' }) {
+  return (
+    <div className={`w-full h-2.5 rounded-full bg-slate-100 overflow-hidden ${className}`}>
+      <div className="h-full rounded-full bg-gradient-to-r from-purple to-purpleLight transition-all duration-500 ease-out" style={{ width: `${Math.min(100, value)}%` }} />
+    </div>
+  );
+}
+function RingProgress({ value, size = 60, stroke = 6 }) {
+  const r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  const offset = c - (Math.min(100, value) / 100) * c;
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} stroke="#E2E8F0" strokeWidth={stroke} fill="none" />
+        <circle cx={size / 2} cy={size / 2} r={r} stroke="#7C3AED" strokeWidth={stroke} fill="none"
+          strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
+          style={{ transition: 'stroke-dashoffset .6s ease' }} />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center font-display font-bold text-ink" style={{ fontSize: size * 0.24 }}>
+        {Math.round(value)}%
+      </div>
+    </div>
+  );
+}
+function IconButton({ icon, onClick, label, className = '', size = 17 }) {
+  return (
+    <button onClick={onClick} aria-label={label} title={label}
+      className={`p-2 rounded-lg text-slateText hover:text-navy hover:bg-slate-100 transition-colors ${className}`}>
+      <Icon name={icon} size={size} />
+    </button>
+  );
+}
+function EmptyState({ icon = 'sparkle', title, subtitle }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center py-16 px-6">
+      <div className="w-14 h-14 rounded-2xl bg-purple/10 text-purple flex items-center justify-center mb-4">
+        <Icon name={icon} size={24} />
+      </div>
+      <p className="font-display font-semibold text-ink mb-1">{title}</p>
+      {subtitle && <p className="text-sm text-slateText max-w-xs">{subtitle}</p>}
+    </div>
+  );
+}
+
+/* ======================= MINI CALENDAR (date picker) ======================= */
+function MiniCalendar({ selected, onSelect, taskCounts = {} }) {
+  const base = parseKey(selected || todayKey());
+  const [vy, setVy] = useState(base.getFullYear());
+  const [vm, setVm] = useState(base.getMonth());
+  const today = todayKey();
+  const first = new Date(vy, vm, 1);
+  const startWd = first.getDay();
+  const daysInMonth = new Date(vy, vm + 1, 0).getDate();
+  const cells = [...Array(startWd).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+  const goPrev = () => vm === 0 ? (setVm(11), setVy(y => y - 1)) : setVm(m => m - 1);
+  const goNext = () => vm === 11 ? (setVm(0), setVy(y => y + 1)) : setVm(m => m + 1);
+
+  return (
+    <div className="w-[280px] p-3.5">
+      <div className="flex items-center justify-between mb-3">
+        <button onClick={goPrev} className="p-1.5 rounded-lg hover:bg-slate-100 text-slateText"><Icon name="chevronLeft" size={16} /></button>
+        <span className="font-display font-semibold text-sm text-ink">{monthLabel(vy, vm)}</span>
+        <button onClick={goNext} className="p-1.5 rounded-lg hover:bg-slate-100 text-slateText"><Icon name="chevronRight" size={16} /></button>
+      </div>
+      <div className="grid grid-cols-7 mb-1">
+        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+          <div key={i} className="text-center text-[10.5px] font-semibold text-slate-400 h-6 flex items-center justify-center">{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-0.5">
+        {cells.map((d, i) => {
+          if (d === null) return <div key={i} />;
+          const key = `${vy}-${pad(vm + 1)}-${pad(d)}`;
+          const isToday = key === today, isSel = key === selected;
+          const count = taskCounts[key] || 0;
+          return (
+            <button key={i} onClick={() => onSelect(key)}
+              className={`relative h-9 rounded-lg text-[13px] flex items-center justify-center transition-colors
+                ${isSel ? 'bg-purple text-white font-semibold' : isToday ? 'bg-purpleLight/15 text-purple font-semibold' : 'text-ink hover:bg-slate-100'}`}>
+              {d}
+              {count > 0 && !isSel && <span className="absolute bottom-1 w-1 h-1 rounded-full bg-purple" />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+function DateSelector({ value, onChange, taskCounts }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className="relative" ref={ref}>
+      <button onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-line bg-white hover:border-purpleLight text-sm font-medium text-ink shadow-card transition-colors">
+        <Icon name="calendar" size={16} className="text-purple" />
+        {fmtShort(value)}
+        <Icon name="chevronDown" size={14} className="text-slateText" />
+      </button>
+      {open && (
+        <div className="absolute z-30 mt-2 bg-white rounded-2xl shadow-pop border border-line animate-pop">
+          <MiniCalendar selected={value} taskCounts={taskCounts} onSelect={k => { onChange(k); setOpen(false); }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ======================= TASK CARD ======================= */
+function TaskCard({ task, onToggle, onEdit, onDelete, onOpen }) {
+  const done = task.status === 'completed';
+  return (
+    <div className={`group flex items-start gap-3 p-4 rounded-2xl border transition-all
+      ${done ? 'bg-slate-50/70 border-line' : 'bg-white border-line hover:border-purpleLight hover:shadow-card'}`}>
+      <button onClick={() => onToggle(task.id)} aria-label="Toggle complete"
+        className={`shrink-0 mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors
+          ${done ? 'bg-emerald-500 border-emerald-500 text-white animate-check' : 'border-slate-300 hover:border-purple'}`}>
+        {done && <Icon name="checkCircle" size={13} strokeWidth={3} className="opacity-0" />}
+        {done && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="m5 13 5 5L20 7" /></svg>}
+      </button>
+      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onOpen(task)}>
+        <p className={`font-medium text-[15px] leading-snug truncate ${done ? 'line-through text-slate-400' : 'text-ink'}`}>{task.title}</p>
+        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+          <CategoryBadge category={task.category} />
+          <PriorityBadge priority={task.priority} />
+          {task.isRolledOver && !done && (
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-navy/5 text-navy flex items-center gap-1">
+              <Icon name="rotate" size={10} /> Rolled over {task.rolloverCount}×
+            </span>
+          )}
+          {task.dueTime && !done && <span className="text-[11px] font-medium text-navy flex items-center gap-1"><Icon name="target" size={11} />Due {fmtTime(task.dueTime)}</span>}
+          {task.estimatedTime && <span className="text-[11px] text-slateText flex items-center gap-1"><Icon name="clock" size={11} />{task.estimatedTime}</span>}
+          {task.originalDate !== task.currentDate && (
+            <span className="text-[11px] text-slate-400">Originally {fmtShort(task.originalDate)}</span>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
+        <IconButton icon="edit" label="Edit task" onClick={() => onEdit(task)} size={15} />
+        <IconButton icon="trash" label="Delete task" onClick={() => onDelete(task)} size={15} />
+      </div>
+    </div>
+  );
+}
+function TaskListSection({ title, tasks, ...handlers }) {
+  if (!tasks.length) return null;
+  return (
+    <div className="mb-6">
+      {title && <p className="text-xs font-semibold uppercase tracking-wide text-slateText mb-2.5 px-1">{title}</p>}
+      <div className="space-y-2.5">
+        {tasks.map(t => <TaskCard key={t.id} task={t} {...handlers} />)}
+      </div>
+    </div>
+  );
+}
+
+/* ======================= MODALS ======================= */
+function ModalShell({ open, onClose, children, wide }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/40 backdrop-blur-sm animate-fade" onMouseDown={onClose}>
+      <div onMouseDown={e => e.stopPropagation()}
+        className={`w-full ${wide ? 'max-w-lg' : 'max-w-md'} max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-pop animate-pop`}>
+        {children}
+      </div>
+    </div>
+  );
+}
+function Field({ label, children }) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-slateText mb-1.5">{label}</label>
+      {children}
+    </div>
+  );
+}
+const inputCls = "w-full px-3.5 py-2.5 rounded-xl border border-line bg-bg focus:bg-white focus:border-purple outline-none text-sm text-ink transition-colors";
+
+function TaskFormModal({ open, onClose, onSubmit, initial, defaultDate, taskCounts }) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [date, setDate] = useState(defaultDate || todayKey());
+  const [priority, setPriority] = useState('Medium');
+  const [category, setCategory] = useState('Work');
+  const [estimatedTime, setEstimatedTime] = useState('');
+  const [dueTime, setDueTime] = useState('');
+  const [showCal, setShowCal] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    if (initial) {
+      setTitle(initial.title); setDescription(initial.description || '');
+      setDate(initial.currentDate); setPriority(initial.priority);
+      setCategory(initial.category); setEstimatedTime(initial.estimatedTime || '');
+      setDueTime(initial.dueTime || '');
+    } else {
+      setTitle(''); setDescription(''); setDate(defaultDate || todayKey());
+      setPriority('Medium'); setCategory('Work'); setEstimatedTime(''); setDueTime('');
+    }
+    setError(''); setShowCal(false);
+  }, [open, initial, defaultDate]);
+
+  const submit = () => {
+    if (!title.trim()) { setError('Give the task a title.'); return; }
+    onSubmit({ title: title.trim(), description: description.trim(), date, priority, category, estimatedTime: estimatedTime.trim(), dueTime });
+  };
+
+  return (
+    <ModalShell open={open} onClose={onClose}>
+      <div className="p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-display font-bold text-lg text-ink">{initial ? 'Edit Task' : 'Add New Task'}</h2>
+          <IconButton icon="x" label="Close" onClick={onClose} />
+        </div>
+        <div className="space-y-4">
+          <Field label="Task Title">
+            <input autoFocus className={inputCls} placeholder="e.g. Prepare Green University seminar certificate"
+              value={title} onChange={e => setTitle(e.target.value)} />
+          </Field>
+          <Field label="Description (optional)">
+            <textarea className={inputCls} rows={3} placeholder="Add extra detail…"
+              value={description} onChange={e => setDescription(e.target.value)} />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Date">
+              <div className="relative">
+                <button type="button" onClick={() => setShowCal(s => !s)} className={`${inputCls} text-left flex items-center justify-between`}>
+                  {fmtShort(date)} <Icon name="calendar" size={15} className="text-purple" />
+                </button>
+                {showCal && (
+                  <div className="absolute z-20 mt-2 bg-white rounded-2xl shadow-pop border border-line">
+                    <MiniCalendar selected={date} taskCounts={taskCounts} onSelect={k => { setDate(k); setShowCal(false); }} />
+                  </div>
+                )}
+              </div>
+            </Field>
+            <Field label="Due Time (optional)">
+              <div className="relative">
+                <input type="time" className={`${inputCls} pr-9`} value={dueTime} onChange={e => setDueTime(e.target.value)} />
+                <Icon name="clock" size={15} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-purple pointer-events-none" />
+              </div>
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Priority">
+              <select className={inputCls} value={priority} onChange={e => setPriority(e.target.value)}>
+                {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </Field>
+            <Field label="Category">
+              <select className={inputCls} value={category} onChange={e => setCategory(e.target.value)}>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </Field>
+          </div>
+          <Field label="Estimated Time (optional)">
+            <input className={inputCls} placeholder="e.g. 45 min" value={estimatedTime} onChange={e => setEstimatedTime(e.target.value)} />
+          </Field>
+          {error && <p className="text-sm text-red-500">{error}</p>}
+        </div>
+        <div className="flex gap-3 mt-6">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-line text-ink font-medium text-sm hover:bg-slate-50 transition-colors">Cancel</button>
+          <button onClick={submit} className="flex-1 py-2.5 rounded-xl bg-purple text-white font-medium text-sm hover:bg-purple/90 transition-colors shadow-card">
+            {initial ? 'Save Changes' : 'Add Task'}
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+function ChangeDateModal({ open, onClose, task, onConfirm, taskCounts }) {
+  const [date, setDate] = useState(todayKey());
+  useEffect(() => { if (task) setDate(task.currentDate); }, [task]);
+  if (!task) return null;
+  return (
+    <ModalShell open={open} onClose={onClose}>
+      <div className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display font-bold text-lg text-ink">Change Task Date</h2>
+          <IconButton icon="x" label="Close" onClick={onClose} />
+        </div>
+        <p className="text-sm text-slateText mb-4 truncate">{task.title}</p>
+        <div className="flex justify-center">
+          <MiniCalendar selected={date} taskCounts={taskCounts} onSelect={setDate} />
+        </div>
+        <div className="flex gap-3 mt-5">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-line text-ink font-medium text-sm hover:bg-slate-50">Cancel</button>
+          <button onClick={() => onConfirm(task.id, date)} className="flex-1 py-2.5 rounded-xl bg-purple text-white font-medium text-sm hover:bg-purple/90 shadow-card">Move Task</button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+function TaskDetailsModal({ open, onClose, task, onToggle, onEdit, onDelete, onChangeDate }) {
+  if (!task) return null;
+  const Row = ({ label, value }) => (
+    <div className="flex items-start justify-between py-2.5 border-b border-line last:border-0">
+      <span className="text-xs font-semibold text-slateText uppercase tracking-wide">{label}</span>
+      <span className="text-sm text-ink text-right max-w-[65%]">{value}</span>
+    </div>
+  );
+  return (
+    <ModalShell open={open} onClose={onClose}>
+      <div className="p-6">
+        <div className="flex items-start justify-between mb-4 gap-3">
+          <h2 className={`font-display font-bold text-lg text-ink ${task.status === 'completed' ? 'line-through text-slate-400' : ''}`}>{task.title}</h2>
+          <IconButton icon="x" label="Close" onClick={onClose} />
+        </div>
+        <div className="flex gap-1.5 flex-wrap mb-4">
+          <CategoryBadge category={task.category} />
+          <PriorityBadge priority={task.priority} />
+          <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${task.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-purpleLight/20 text-purple'}`}>
+            {task.status === 'completed' ? 'Completed' : task.isRolledOver ? 'Rolled Over' : 'Pending'}
+          </span>
+        </div>
+        {task.description && <p className="text-sm text-slateText mb-4 leading-relaxed">{task.description}</p>}
+        <div className="border-t border-line pt-1">
+          <Row label="Created" value={new Date(task.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })} />
+          <Row label="Original Date" value={fmtShort(task.originalDate)} />
+          <Row label="Current Due Date" value={fmtShort(task.currentDate)} />
+          {task.dueTime && <Row label="Due Time" value={fmtTime(task.dueTime)} />}
+          <Row label="Rollover Count" value={task.rolloverCount} />
+          {task.estimatedTime && <Row label="Estimated Time" value={task.estimatedTime} />}
+          {task.completedAt && <Row label="Completion Date" value={new Date(task.completedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })} />}
+        </div>
+        <div className="flex flex-wrap gap-2 mt-5">
+          <button onClick={() => onToggle(task.id)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple text-white text-sm font-medium hover:bg-purple/90">
+            <Icon name="checkCircle" size={15} /> {task.status === 'completed' ? 'Mark as Pending' : 'Mark as Done'}
+          </button>
+          <button onClick={() => onEdit(task)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-line text-ink text-sm font-medium hover:bg-slate-50">
+            <Icon name="edit" size={15} /> Edit
+          </button>
+          <button onClick={() => onChangeDate(task)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-line text-ink text-sm font-medium hover:bg-slate-50">
+            <Icon name="calendar" size={15} /> Change Date
+          </button>
+          <button onClick={() => onDelete(task)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50">
+            <Icon name="trash" size={15} /> Delete
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+function ConfirmDialog({ open, title, message, confirmLabel = 'Confirm', danger, onConfirm, onCancel }) {
+  if (!open) return null;
+  return (
+    <ModalShell open={open} onClose={onCancel}>
+      <div className="p-6">
+        <h3 className="font-display font-bold text-lg text-ink mb-2">{title}</h3>
+        <p className="text-sm text-slateText mb-6">{message}</p>
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl border border-line text-ink font-medium text-sm hover:bg-slate-50">Cancel</button>
+          <button onClick={onConfirm} className={`flex-1 py-2.5 rounded-xl text-white font-medium text-sm shadow-card ${danger ? 'bg-red-500 hover:bg-red-600' : 'bg-purple hover:bg-purple/90'}`}>{confirmLabel}</button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+/* ======================= AUTH PAGE ======================= */
+function AuthPage({ onAuth }) {
+  const [mode, setMode] = useState('login');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [error, setError] = useState('');
+
+  const switchMode = (m) => { setMode(m); setError(''); setPassword(''); setConfirm(''); };
+
+  const submit = (e) => {
+    e.preventDefault();
+    setError('');
+    const users = loadUsers();
+    const cleanEmail = email.trim().toLowerCase();
+    if (mode === 'signup') {
+      if (!name.trim() || !cleanEmail || !password) { setError('Fill in every field to continue.'); return; }
+      if (password.length < 4) { setError('Use at least 4 characters for your password.'); return; }
+      if (password !== confirm) { setError('Passwords do not match.'); return; }
+      if (users.some(u => u.email === cleanEmail)) { setError('An account with that email already exists.'); return; }
+      const user = { id: uid(), name: name.trim(), email: cleanEmail, password: obfuscate(password), createdAt: new Date().toISOString() };
+      saveUsers([...users, user]);
+      saveSession(user.id);
+      onAuth(user);
+    } else {
+      const found = users.find(u => u.email === cleanEmail);
+      if (!found || found.password !== obfuscate(password)) { setError('Incorrect email or password.'); return; }
+      saveSession(found.id);
+      onAuth(found);
+    }
+  };
+
+  return (
+    <div className="min-h-screen w-full flex bg-white font-body">
+      <div className="hidden md:flex md:w-[42%] bg-navy text-white flex-col justify-between p-12 relative overflow-hidden shrink-0">
+        <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-purple/20 blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-purpleLight/10 blur-3xl" />
+        <div className="flex items-center gap-2.5 relative">
+          <div className="w-9 h-9 rounded-lg bg-purple flex items-center justify-center shrink-0"><Icon name="checkSquare" size={18} className="text-white" /></div>
+          <span className="font-display font-bold text-xl tracking-tight">Momentum</span>
+        </div>
+        <div className="relative">
+          <p className="font-display font-bold text-3xl leading-tight mb-4">Nothing you plan for<br />today gets lost tomorrow.</p>
+          <p className="text-white/60 text-sm leading-relaxed max-w-sm">Unfinished tasks roll forward automatically, due-time reminders keep you honest, and everything stays put once it's done.</p>
+        </div>
+        <p className="text-white/40 text-xs relative">Royal Navy &amp; Purple · your workspace, your pace</p>
+      </div>
+      <div className="flex-1 flex items-center justify-center p-6 md:p-10">
+        <div className="w-full max-w-sm">
+          <div className="md:hidden flex items-center gap-2.5 mb-8">
+            <div className="w-9 h-9 rounded-lg bg-purple flex items-center justify-center"><Icon name="checkSquare" size={18} className="text-white" /></div>
+            <span className="font-display font-bold text-xl text-ink">Momentum</span>
+          </div>
+          <h1 className="font-display font-bold text-2xl text-ink mb-1">{mode === 'login' ? 'Welcome back' : 'Create your account'}</h1>
+          <p className="text-sm text-slateText mb-6">{mode === 'login' ? 'Log in to keep your tasks moving.' : 'Sign up to start tracking your day.'}</p>
+          <form onSubmit={submit} className="space-y-4">
+            {mode === 'signup' && (
+              <Field label="Full Name"><input className={inputCls} value={name} onChange={e => setName(e.target.value)} placeholder="Your name" /></Field>
+            )}
+            <Field label="Email"><input type="email" className={inputCls} value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" /></Field>
+            <Field label="Password">
+              <div className="relative">
+                <input type={showPw ? 'text' : 'password'} className={`${inputCls} pr-14`} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+                <button type="button" onClick={() => setShowPw(s => !s)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-purple text-xs font-semibold">{showPw ? 'Hide' : 'Show'}</button>
+              </div>
+            </Field>
+            {mode === 'signup' && (
+              <Field label="Confirm Password"><input type={showPw ? 'text' : 'password'} className={inputCls} value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="••••••••" /></Field>
+            )}
+            {error && <p className="text-sm text-red-500">{error}</p>}
+            <button type="submit" className="w-full py-2.5 rounded-xl bg-purple text-white font-semibold text-sm hover:bg-purple/90 shadow-card transition-colors">
+              {mode === 'login' ? 'Log In' : 'Sign Up'}
+            </button>
+          </form>
+          <p className="text-sm text-slateText text-center mt-6">
+            {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+            <button onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')} className="text-purple font-semibold hover:underline">
+              {mode === 'login' ? 'Sign up' : 'Log in'}
+            </button>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ======================= SIDEBAR ======================= */
+function Sidebar({ view, setView, collapsed, setCollapsed, mobileOpen, setMobileOpen, user, onLogout }) {
+  const go = k => { setView(k); setMobileOpen(false); };
+  return (
+    <>
+      {mobileOpen && <div className="fixed inset-0 bg-navy/50 z-40 md:hidden animate-fade" onClick={() => setMobileOpen(false)} />}
+      <aside className={`fixed md:static z-50 md:z-auto top-0 left-0 h-full bg-navy text-white flex flex-col shrink-0 transition-all duration-200
+        ${collapsed ? 'md:w-[76px]' : 'md:w-[248px]'} w-[248px]
+        ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/10">
+          <div className="w-8 h-8 rounded-lg bg-purple flex items-center justify-center shrink-0">
+            <Icon name="checkSquare" size={16} className="text-white" />
+          </div>
+          {!collapsed && <span className="font-display font-bold text-[17px] tracking-tight">Momentum</span>}
+        </div>
+        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto scrollbar-none">
+          {NAV_ITEMS.map(item => {
+            const active = view === item.key;
+            return (
+              <button key={item.key} onClick={() => go(item.key)} title={item.label}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors
+                  ${active ? 'bg-purple text-white shadow-card' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}>
+                <Icon name={item.icon} size={18} className="shrink-0" />
+                {!collapsed && <span className="truncate">{item.label}</span>}
+              </button>
+            );
+          })}
+        </nav>
+        <button onClick={() => setCollapsed(c => !c)} className="hidden md:flex items-center justify-center gap-2 mx-3 mb-3 py-2 rounded-xl text-white/60 hover:bg-white/10 hover:text-white text-xs font-medium">
+          <Icon name={collapsed ? 'chevronRight' : 'chevronLeft'} size={14} />
+          {!collapsed && 'Collapse'}
+        </button>
+        <div className="border-t border-white/10 p-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-purpleLight/30 flex items-center justify-center shrink-0">
+            <Icon name="user" size={16} className="text-purpleLight" />
+          </div>
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold truncate">{user.name}</p>
+              <p className="text-[11px] text-white/50 truncate">{user.email}</p>
+            </div>
+          )}
+          <button onClick={onLogout} title="Log out" className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 shrink-0">
+            <Icon name="arrowRight" size={15} />
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+/* ======================= HEADER ======================= */
+function greetingWord() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good Morning';
+  if (h < 17) return 'Good Afternoon';
+  return 'Good Evening';
+}
+function NotificationDropdown({ tasks, reminders = [] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  const today = todayKey();
+  const todays = tasks.filter(t => t.currentDate === today);
+  const rolled = todays.filter(t => t.isRolledOver && t.status !== 'completed').length;
+  const done = todays.filter(t => t.status === 'completed').length;
+  const pct = todays.length ? Math.round((done / todays.length) * 100) : 0;
+  const items = reminders.map(r => ({ icon: 'target', text: r.text }));
+  if (rolled > 0) items.push({ icon: 'rotate', text: `${rolled} task${rolled > 1 ? 's were' : ' was'} rolled over from a previous day.` });
+  if (todays.length > 0) items.push({ icon: 'checkSquare', text: `You have ${todays.length} task${todays.length > 1 ? 's' : ''} scheduled for today.` });
+  if (todays.length > 0) items.push({ icon: 'trend', text: `You've completed ${pct}% of today's tasks.` });
+  if (!items.length) items.push({ icon: 'sparkle', text: 'No new notifications. You\'re all caught up.' });
+
+  return (
+    <div className="relative" ref={ref}>
+      <button onClick={() => setOpen(o => !o)} className="relative p-2.5 rounded-xl text-slateText hover:text-navy hover:bg-slate-100 transition-colors">
+        <Icon name="bell" size={19} />
+        {(rolled > 0 || reminders.length > 0) && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-purple ring-2 ring-white" />}
+      </button>
+      {open && (
+        <div className="absolute right-0 z-30 mt-2 w-80 bg-white rounded-2xl shadow-pop border border-line animate-pop overflow-hidden">
+          <div className="px-4 py-3 border-b border-line font-display font-semibold text-sm text-ink">Notifications</div>
+          <div className="max-h-72 overflow-y-auto">
+            {items.map((n, i) => (
+              <div key={i} className="flex items-start gap-3 px-4 py-3 border-b border-line last:border-0 hover:bg-slate-50">
+                <div className="w-8 h-8 rounded-lg bg-purple/10 text-purple flex items-center justify-center shrink-0"><Icon name={n.icon} size={15} /></div>
+                <p className="text-sm text-ink leading-snug">{n.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+function Header({ view, onOpenMobile, searchQuery, setSearchQuery, tasks, reminders }) {
+  const titleMap = { dashboard: 'Dashboard', today: "Today's Tasks", all: 'All Tasks', calendar: 'Calendar', completed: 'Completed Tasks', pending: 'Pending Tasks', settings: 'Settings' };
+  const [mobileSearch, setMobileSearch] = useState(false);
+  return (
+    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-line px-4 md:px-8 py-4 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3 min-w-0">
+        <button onClick={onOpenMobile} className="md:hidden p-2 rounded-lg text-navy hover:bg-slate-100 shrink-0"><Icon name="menu" size={20} /></button>
+        <div className="min-w-0">
+          <p className="font-display font-bold text-lg md:text-xl text-ink truncate">
+            {view === 'dashboard' ? `${greetingWord()} 👋` : titleMap[view]}
+          </p>
+          <p className="text-xs md:text-sm text-slateText truncate">
+            {view === 'dashboard' ? fmtLong(todayKey()) : `${titleMap[view]} · ${fmtMed(todayKey())}`}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
+        <div className={`items-center gap-2 bg-bg border border-line rounded-xl px-3 py-2 ${mobileSearch ? 'flex absolute left-4 right-4 top-[68px] z-20 bg-white shadow-pop' : 'hidden md:flex md:w-56'}`}>
+          <Icon name="search" size={15} className="text-slateText shrink-0" />
+          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search tasks…"
+            className="bg-transparent outline-none text-sm w-full placeholder:text-slate-400" />
+          {searchQuery && <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slateText"><Icon name="x" size={14} /></button>}
+        </div>
+        <button onClick={() => setMobileSearch(s => !s)} className="md:hidden p-2.5 rounded-xl text-slateText hover:bg-slate-100"><Icon name="search" size={18} /></button>
+        <NotificationDropdown tasks={tasks} reminders={reminders} />
+        <div className="w-9 h-9 rounded-full bg-navy text-white flex items-center justify-center"><Icon name="user" size={16} /></div>
+      </div>
+    </header>
+  );
+}
+
+/* ======================= STATS ======================= */
+function StatsRow({ tasks }) {
+  const total = tasks.length;
+  const completed = tasks.filter(t => t.status === 'completed').length;
+  const pending = total - completed;
+  const rate = total ? Math.round((completed / total) * 100) : 0;
+  const cards = [
+    { label: 'Total Tasks', value: total, icon: 'layers' },
+    { label: 'Completed', value: completed, icon: 'checkCircle' },
+    { label: 'Pending', value: pending, icon: 'clock' },
+  ];
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+      {cards.map(c => (
+        <div key={c.label} className="bg-white border border-line rounded-2xl p-4 md:p-5 shadow-card">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-slateText uppercase tracking-wide">{c.label}</span>
+            <div className="w-8 h-8 rounded-lg bg-navy/5 text-navy flex items-center justify-center"><Icon name={c.icon} size={15} /></div>
+          </div>
+          <p className="font-display font-extrabold text-2xl md:text-3xl text-ink">{c.value}</p>
+        </div>
+      ))}
+      <div className="bg-navy rounded-2xl p-4 md:p-5 shadow-card flex items-center justify-between">
+        <div>
+          <span className="text-xs font-semibold text-white/60 uppercase tracking-wide">Completion Rate</span>
+          <p className="font-display font-extrabold text-2xl md:text-3xl text-white mt-2">{rate}%</p>
+        </div>
+        <RingProgress value={rate} size={52} stroke={5} />
+      </div>
+    </div>
+  );
+}
+
+/* ======================= FILTER BAR ======================= */
+function FilterBar({ status, setStatus, priority, setPriority, sortBy, setSortBy, sortDir, setSortDir }) {
+  const selCls = "text-sm rounded-xl border border-line bg-white px-3 py-2 text-ink outline-none focus:border-purple";
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-5">
+      <div className="flex items-center gap-1.5 text-slateText mr-1"><Icon name="layers" size={14} /><span className="text-xs font-semibold uppercase tracking-wide">Filter</span></div>
+      <select className={selCls} value={status} onChange={e => setStatus(e.target.value)}>
+        <option value="all">All Status</option>
+        <option value="pending">Pending</option>
+        <option value="completed">Completed</option>
+        <option value="rolled">Rolled Over</option>
+      </select>
+      <select className={selCls} value={priority} onChange={e => setPriority(e.target.value)}>
+        <option value="all">All Priority</option>
+        <option value="High">High Priority</option>
+        <option value="Medium">Medium Priority</option>
+        <option value="Low">Low Priority</option>
+      </select>
+      <div className="flex items-center gap-1.5 text-slateText ml-2 mr-1"><span className="text-xs font-semibold uppercase tracking-wide">Sort</span></div>
+      <select className={selCls} value={sortBy} onChange={e => setSortBy(e.target.value)}>
+        <option value="date">Due Date</option>
+        <option value="priority">Priority</option>
+        <option value="created">Created Date</option>
+        <option value="status">Status</option>
+      </select>
+      <button onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')} className="text-sm rounded-xl border border-line bg-white px-3 py-2 text-ink hover:bg-slate-50 flex items-center gap-1">
+        <Icon name={sortDir === 'asc' ? 'trend' : 'trend'} size={14} className={sortDir === 'desc' ? 'rotate-180' : ''} />
+        {sortDir === 'asc' ? 'Asc' : 'Desc'}
+      </button>
+    </div>
+  );
+}
+function applyFilterSort(tasks, { status, priority, sortBy, sortDir, query }) {
+  let out = tasks;
+  if (query && query.trim()) {
+    const q = query.trim().toLowerCase();
+    out = out.filter(t => t.title.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q) || t.category.toLowerCase().includes(q));
+  }
+  if (status === 'pending') out = out.filter(t => t.status === 'pending');
+  else if (status === 'completed') out = out.filter(t => t.status === 'completed');
+  else if (status === 'rolled') out = out.filter(t => t.isRolledOver && t.status !== 'completed');
+  if (priority !== 'all') out = out.filter(t => t.priority === priority);
+  const pWeight = { High: 3, Medium: 2, Low: 1 };
+  const sWeight = { pending: 1, 'rolled-over': 1.5, completed: 2 };
+  out = [...out].sort((a, b) => {
+    let cmp = 0;
+    if (sortBy === 'date') cmp = a.currentDate.localeCompare(b.currentDate);
+    else if (sortBy === 'priority') cmp = pWeight[a.priority] - pWeight[b.priority];
+    else if (sortBy === 'created') cmp = a.createdAt.localeCompare(b.createdAt);
+    else if (sortBy === 'status') cmp = (a.status === 'completed' ? 2 : 1) - (b.status === 'completed' ? 2 : 1);
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+  return out;
+}
+
+/* ======================= PAGES ======================= */
+function DateTaskPage({ mode, tasks, selectedDate, setSelectedDate, taskCounts, searchQuery, onOpenAdd, ...handlers }) {
+  const today = todayKey();
+  const effectiveDate = mode === 'today' ? today : selectedDate;
+  let dayTasks = tasks.filter(t => t.currentDate === effectiveDate);
+  if (searchQuery.trim()) {
+    const q = searchQuery.trim().toLowerCase();
+    dayTasks = dayTasks.filter(t => t.title.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q) || t.category.toLowerCase().includes(q));
+  }
+  const completed = dayTasks.filter(t => t.status === 'completed');
+  const pending = dayTasks.filter(t => t.status !== 'completed');
+  const rolled = pending.filter(t => t.isRolledOver);
+  const fresh = pending.filter(t => !t.isRolledOver);
+  const rate = dayTasks.length ? Math.round((completed.length / dayTasks.length) * 100) : 0;
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div>
+          {mode === 'dashboard' && (
+            <DateSelector value={selectedDate} onChange={setSelectedDate} taskCounts={taskCounts} />
+          )}
+          {mode === 'today' && <p className="text-sm text-slateText">Everything due <span className="font-semibold text-ink">{fmtLong(today)}</span></p>}
+        </div>
+        <button onClick={() => onOpenAdd(effectiveDate)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple text-white text-sm font-semibold shadow-card hover:bg-purple/90 transition-colors">
+          <Icon name="plus" size={16} /> Add New Task
+        </button>
+      </div>
+
+      <StatsRow tasks={dayTasks} />
+
+      <div className="bg-white border border-line rounded-2xl p-5 mb-6 shadow-card">
+        <div className="flex items-center justify-between mb-2">
+          <p className="font-display font-semibold text-ink text-sm">
+            {effectiveDate === today ? "Today's Progress" : `Progress · ${fmtShort(effectiveDate)}`}
+          </p>
+          <p className="text-sm text-slateText font-medium">{completed.length} of {dayTasks.length} tasks completed</p>
+        </div>
+        <ProgressBar value={rate} />
+      </div>
+
+      {rolled.length > 0 && (
+        <div className="flex items-center gap-2 mb-3 text-navy bg-navy/5 border border-navy/10 rounded-xl px-4 py-2.5 text-sm">
+          <Icon name="rotate" size={15} /> {rolled.length} rolled-over task{rolled.length > 1 ? 's' : ''} carried into this day, plus {fresh.length} new.
+        </div>
+      )}
+
+      {dayTasks.length === 0 ? (
+        <EmptyState icon="checkSquare" title="Nothing scheduled" subtitle="Add a task for this day to get started." />
+      ) : (
+        <>
+          <TaskListSection title="Rolled Over" tasks={rolled} {...handlers} />
+          <TaskListSection title={rolled.length ? 'New Today' : 'Pending'} tasks={fresh} {...handlers} />
+          <TaskListSection title="Completed" tasks={completed} {...handlers} />
+        </>
+      )}
+    </div>
+  );
+}
+
+function AllTasksPage({ tasks, searchQuery, taskCounts, onOpenAdd, ...handlers }) {
+  const [status, setStatus] = useState('all');
+  const [priority, setPriority] = useState('all');
+  const [sortBy, setSortBy] = useState('date');
+  const [sortDir, setSortDir] = useState('asc');
+  const filtered = applyFilterSort(tasks, { status, priority, sortBy, sortDir, query: searchQuery });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-5">
+        <p className="text-sm text-slateText">{filtered.length} of {tasks.length} tasks</p>
+        <button onClick={() => onOpenAdd(todayKey())} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple text-white text-sm font-semibold shadow-card hover:bg-purple/90">
+          <Icon name="plus" size={16} /> Add New Task
+        </button>
+      </div>
+      <FilterBar {...{ status, setStatus, priority, setPriority, sortBy, setSortBy, sortDir, setSortDir }} />
+      {filtered.length === 0 ? (
+        <EmptyState icon="search" title="No tasks match" subtitle="Try adjusting your filters or search." />
+      ) : (
+        <div className="space-y-2.5">{filtered.map(t => <TaskCard key={t.id} task={t} {...handlers} />)}</div>
+      )}
+    </div>
+  );
+}
+
+function CalendarPage({ tasks, taskCounts, onOpenAdd, ...handlers }) {
+  const base = new Date();
+  const [vy, setVy] = useState(base.getFullYear());
+  const [vm, setVm] = useState(base.getMonth());
+  const [selected, setSelected] = useState(todayKey());
+  const today = todayKey();
+  const first = new Date(vy, vm, 1);
+  const startWd = first.getDay();
+  const daysInMonth = new Date(vy, vm + 1, 0).getDate();
+  const cells = [...Array(startWd).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+  const goPrev = () => vm === 0 ? (setVm(11), setVy(y => y - 1)) : setVm(m => m - 1);
+  const goNext = () => vm === 11 ? (setVm(0), setVy(y => y + 1)) : setVm(m => m + 1);
+
+  const dayStats = key => {
+    const list = tasks.filter(t => t.currentDate === key);
+    const done = list.filter(t => t.status === 'completed').length;
+    return { total: list.length, done, pending: list.length - done };
+  };
+  const selectedTasks = tasks.filter(t => t.currentDate === selected);
+
+  return (
+    <div>
+      <div className="bg-white border border-line rounded-2xl p-4 md:p-6 shadow-card mb-6">
+        <div className="flex items-center justify-between mb-5">
+          <button onClick={goPrev} className="p-2 rounded-lg hover:bg-slate-100 text-slateText"><Icon name="chevronLeft" size={18} /></button>
+          <span className="font-display font-bold text-lg text-ink">{monthLabel(vy, vm)}</span>
+          <button onClick={goNext} className="p-2 rounded-lg hover:bg-slate-100 text-slateText"><Icon name="chevronRight" size={18} /></button>
+        </div>
+        <div className="grid grid-cols-7 mb-1">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => (
+            <div key={i} className="text-center text-[11px] font-semibold text-slate-400 py-2">{d}</div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1 md:gap-1.5">
+          {cells.map((d, i) => {
+            if (d === null) return <div key={i} />;
+            const key = `${vy}-${pad(vm + 1)}-${pad(d)}`;
+            const isToday = key === today, isSel = key === selected;
+            const { total, done, pending } = dayStats(key);
+            return (
+              <button key={i} onClick={() => setSelected(key)}
+                className={`relative rounded-xl p-1.5 md:p-2 h-16 md:h-20 flex flex-col items-start text-left transition-colors border
+                ${isSel ? 'bg-purple border-purple text-white' : isToday ? 'bg-purpleLight/10 border-purpleLight/40' : 'bg-white border-line hover:border-purpleLight'}`}>
+                <span className={`text-xs md:text-sm font-semibold ${isSel ? 'text-white' : isToday ? 'text-purple' : 'text-ink'}`}>{d}</span>
+                {total > 0 && (
+                  <div className="mt-auto w-full">
+                    <span className={`block text-[10px] md:text-[11px] font-medium ${isSel ? 'text-white/90' : 'text-slateText'}`}>{total} task{total > 1 ? 's' : ''}</span>
+                    <div className="flex gap-1 mt-0.5">
+                      {done > 0 && <span className={`text-[9px] md:text-[10px] px-1 rounded ${isSel ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700'}`}>{done} done</span>}
+                      {pending > 0 && <span className={`text-[9px] md:text-[10px] px-1 rounded ${isSel ? 'bg-white/20 text-white' : 'bg-purple/10 text-purple'}`}>{pending} left</span>}
+                    </div>
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-display font-bold text-ink">{fmtLong(selected)}</h3>
+        <button onClick={() => onOpenAdd(selected)} className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-purple text-white text-sm font-semibold shadow-card hover:bg-purple/90">
+          <Icon name="plus" size={15} /> Add Task
+        </button>
+      </div>
+      {selectedTasks.length === 0 ? (
+        <EmptyState icon="calendar" title="No tasks this day" subtitle="Add one, or pick another date on the calendar." />
+      ) : (
+        <div className="space-y-2.5">{selectedTasks.map(t => <TaskCard key={t.id} task={t} {...handlers} />)}</div>
+      )}
+    </div>
+  );
+}
+
+function CompletedPage({ tasks, searchQuery, ...handlers }) {
+  const [priority, setPriority] = useState('all');
+  const [category, setCategory] = useState('all');
+  let completed = tasks.filter(t => t.status === 'completed');
+  if (searchQuery.trim()) {
+    const q = searchQuery.trim().toLowerCase();
+    completed = completed.filter(t => t.title.toLowerCase().includes(q) || t.category.toLowerCase().includes(q));
+  }
+  if (priority !== 'all') completed = completed.filter(t => t.priority === priority);
+  if (category !== 'all') completed = completed.filter(t => t.category === category);
+  completed = [...completed].sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
+
+  const selCls = "text-sm rounded-xl border border-line bg-white px-3 py-2 text-ink outline-none focus:border-purple";
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-2 mb-5">
+        <p className="text-sm text-slateText mr-auto">{completed.length} completed task{completed.length !== 1 ? 's' : ''}</p>
+        <select className={selCls} value={priority} onChange={e => setPriority(e.target.value)}>
+          <option value="all">All Priority</option>
+          {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select className={selCls} value={category} onChange={e => setCategory(e.target.value)}>
+          <option value="all">All Category</option>
+          {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+      {completed.length === 0 ? (
+        <EmptyState icon="checkCircle" title="No completed tasks yet" subtitle="Finished tasks will show up here with their completion date." />
+      ) : (
+        <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-card">
+          <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_1fr_0.7fr] gap-2 px-5 py-3 bg-bg text-[11px] font-semibold uppercase tracking-wide text-slateText border-b border-line">
+            <span>Task</span><span>Original Date</span><span>Completed</span><span>Category</span><span>Priority</span><span>Rollovers</span>
+          </div>
+          {completed.map(t => (
+            <div key={t.id} onClick={() => handlers.onOpen(t)} className="grid grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1fr_1fr_0.7fr] gap-2 px-5 py-3.5 border-b border-line last:border-0 hover:bg-slate-50 cursor-pointer text-sm">
+              <span className="col-span-2 md:col-span-1 font-medium text-ink truncate">{t.title}</span>
+              <span className="text-slateText hidden md:block">{fmtShort(t.originalDate)}</span>
+              <span className="text-slateText hidden md:block">{t.completedAt ? fmtShort(toKey(new Date(t.completedAt))) : '—'}</span>
+              <span className="hidden md:block"><CategoryBadge category={t.category} /></span>
+              <span className="hidden md:block"><PriorityBadge priority={t.priority} /></span>
+              <span className="text-slateText hidden md:block">{t.rolloverCount}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PendingPage({ tasks, searchQuery, ...handlers }) {
+  const today = todayKey();
+  let pending = tasks.filter(t => t.status !== 'completed');
+  if (searchQuery.trim()) {
+    const q = searchQuery.trim().toLowerCase();
+    pending = pending.filter(t => t.title.toLowerCase().includes(q) || t.category.toLowerCase().includes(q));
+  }
+  const overdue = pending.filter(t => t.isRolledOver && t.currentDate === today);
+  const todays = pending.filter(t => !t.isRolledOver && t.currentDate === today);
+  const future = pending.filter(t => t.currentDate > today);
+
+  return (
+    <div>
+      <p className="text-sm text-slateText mb-5">{pending.length} pending task{pending.length !== 1 ? 's' : ''} across {new Set(pending.map(t => t.currentDate)).size} day(s)</p>
+      {pending.length === 0 ? (
+        <EmptyState icon="checkCircle" title="Inbox zero" subtitle="No pending tasks — nice work." />
+      ) : (
+        <>
+          <TaskListSection title="Overdue / Rolled Over" tasks={overdue} {...handlers} />
+          <TaskListSection title="Today" tasks={todays} {...handlers} />
+          <TaskListSection title="Scheduled for the Future" tasks={future} {...handlers} />
+        </>
+      )}
+    </div>
+  );
+}
+
+function SettingsPage({ tasks, onClearAll, user, onLogout }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const total = tasks.length;
+  const completed = tasks.filter(t => t.status === 'completed').length;
+  return (
+    <div className="max-w-2xl space-y-5">
+      <div className="bg-white border border-line rounded-2xl p-5 shadow-card">
+        <h3 className="font-display font-semibold text-ink mb-1">Account</h3>
+        <p className="text-sm text-slateText mb-4">Signed in as <span className="font-medium text-ink">{user.name}</span> ({user.email}).</p>
+        <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-line text-ink text-sm font-medium hover:bg-slate-50">
+          <Icon name="arrowRight" size={15} /> Log Out
+        </button>
+      </div>
+      <div className="bg-white border border-line rounded-2xl p-5 shadow-card">
+        <h3 className="font-display font-semibold text-ink mb-1">Appearance</h3>
+        <p className="text-sm text-slateText mb-4">Momentum uses a fixed Royal Navy &amp; Purple identity for a consistent, professional look.</p>
+        <div className="flex gap-3">
+          {[{ c: '#0B1F3A', l: 'Navy' }, { c: '#7C3AED', l: 'Purple' }, { c: '#A78BFA', l: 'Light Purple' }, { c: '#F8FAFC', l: 'Background' }].map(s => (
+            <div key={s.l} className="flex flex-col items-center gap-1.5">
+              <div className="w-10 h-10 rounded-xl border border-line" style={{ background: s.c }} />
+              <span className="text-[11px] text-slateText">{s.l}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="bg-white border border-line rounded-2xl p-5 shadow-card">
+        <h3 className="font-display font-semibold text-ink mb-1">Your Data</h3>
+        <p className="text-sm text-slateText mb-4">{total} tasks stored locally in this browser · {completed} completed. Momentum keeps working offline and never loses data on refresh.</p>
+        <button onClick={() => setConfirmOpen(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50">
+          <Icon name="trash" size={15} /> Clear All Data
+        </button>
+      </div>
+      <div className="bg-white border border-line rounded-2xl p-5 shadow-card">
+        <h3 className="font-display font-semibold text-ink mb-1">About</h3>
+        <p className="text-sm text-slateText leading-relaxed">Momentum automatically carries unfinished tasks forward to the next day, so nothing quietly falls through the cracks. Tasks you schedule for a future date stay put until that day arrives.</p>
+      </div>
+      <ConfirmDialog open={confirmOpen} title="Clear all data?" message="This permanently deletes every task stored in this browser. This can't be undone."
+        confirmLabel="Delete Everything" danger onCancel={() => setConfirmOpen(false)} onConfirm={() => { onClearAll(); setConfirmOpen(false); }} />
+    </div>
+  );
+}
+
+/* ======================= APP ======================= */
+function Workspace({ user, onLogout }) {
+  const [tasks, setTasks] = useState(() => {
+    const loaded = loadTasks(user.id);
+    const { tasks: rolled } = runRollover(loaded, user.id);
+    persistTasks(rolled, user.id);
+    return rolled;
+  });
+  const [view, setView] = useState('dashboard');
+  const [selectedDate, setSelectedDate] = useState(todayKey());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [reminders, setReminders] = useState([]);
+
+  const [addOpen, setAddOpen] = useState(false);
+  const [addDefaultDate, setAddDefaultDate] = useState(todayKey());
+  const [editingTask, setEditingTask] = useState(null);
+  const [viewingTask, setViewingTask] = useState(null);
+  const [dateChangeTask, setDateChangeTask] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  // periodic re-check in case app is left open across midnight
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setTasks(prev => {
+        const { tasks: rolled, changed } = runRollover(prev, user.id);
+        if (changed) persistTasks(rolled, user.id);
+        return changed ? rolled : prev;
+      });
+    }, 60000);
+    return () => clearInterval(iv);
+  }, [user.id]);
+
+  useEffect(() => { persistTasks(tasks, user.id); }, [tasks, user.id]);
+
+  // ask permission once, then poll for tasks whose due time is coming up in the next 15 minutes
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+  useEffect(() => {
+    const check = () => {
+      const notified = loadNotified(user.id);
+      const today = todayKey();
+      const now = new Date();
+      let changed = false;
+      const fresh = [];
+      tasks.forEach(t => {
+        if (t.status === 'completed' || !t.dueTime || t.currentDate !== today || notified.has(t.id)) return;
+        const [h, m] = t.dueTime.split(':').map(Number);
+        const due = new Date(); due.setHours(h, m, 0, 0);
+        const minutesUntil = (due - now) / 60000;
+        if (minutesUntil <= 15 && minutesUntil > -1) {
+          notified.add(t.id); changed = true;
+          const text = `"${t.title}" is due at ${fmtTime(t.dueTime)}.`;
+          fresh.push({ id: t.id, text });
+          if ('Notification' in window && Notification.permission === 'granted') {
+            try { new Notification('Task due soon', { body: text }); } catch (e) {}
+          }
+        }
+      });
+      if (changed) saveNotified(user.id, notified);
+      if (fresh.length) setReminders(prev => [...fresh, ...prev].slice(0, 20));
+    };
+    check();
+    const iv = setInterval(check, 30000);
+    return () => clearInterval(iv);
+  }, [tasks, user.id]);
+
+  const taskCounts = useMemo(() => {
+    const map = {};
+    tasks.forEach(t => { map[t.currentDate] = (map[t.currentDate] || 0) + 1; });
+    return map;
+  }, [tasks]);
+
+  const openAdd = (date) => { setAddDefaultDate(date || todayKey()); setEditingTask(null); setAddOpen(true); };
+  const openEdit = (task) => { setEditingTask(task); setViewingTask(null); setAddOpen(true); };
+  const openDetails = (task) => setViewingTask(task);
+
+  const submitTaskForm = (data) => {
+    if (editingTask) {
+      setTasks(prev => prev.map(t => t.id === editingTask.id ? {
+        ...t, title: data.title, description: data.description, category: data.category,
+        priority: data.priority, estimatedTime: data.estimatedTime, dueTime: data.dueTime, currentDate: data.date,
+        originalDate: data.date < t.originalDate ? data.date : t.originalDate,
+      } : t));
+    } else {
+      setTasks(prev => [...prev, makeTask({ title: data.title, description: data.description, category: data.category, priority: data.priority, estimatedTime: data.estimatedTime, dueTime: data.dueTime, date: data.date })]);
+    }
+    setAddOpen(false); setEditingTask(null);
+  };
+
+  const toggleComplete = (id) => {
+    setTasks(prev => prev.map(t => t.id === id ? (
+      t.status === 'completed'
+        ? { ...t, status: 'pending', completedAt: null }
+        : { ...t, status: 'completed', completedAt: new Date().toISOString() }
+    ) : t));
+    setViewingTask(v => v && v.id === id ? { ...v, status: v.status === 'completed' ? 'pending' : 'completed' } : v);
+  };
+  const requestDelete = (task) => setDeleteTarget(task);
+  const confirmDelete = () => {
+    setTasks(prev => prev.filter(t => t.id !== deleteTarget.id));
+    setDeleteTarget(null); setViewingTask(null);
+  };
+  const changeDate = (id, newDate) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, currentDate: newDate, isRolledOver: false } : t));
+    setDateChangeTask(null); setViewingTask(null);
+  };
+  const clearAll = () => {
+    localStorage.removeItem(tasksKey(user.id)); localStorage.removeItem(checkKey(user.id)); localStorage.removeItem(notifiedKey(user.id));
+    const seeded = seedTasks(); persistTasks(seeded, user.id); setTasks(seeded); setReminders([]);
+  };
+
+  const handlers = { onToggle: toggleComplete, onEdit: openEdit, onDelete: requestDelete, onOpen: openDetails };
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-bg font-body">
+      <Sidebar view={view} setView={setView} collapsed={collapsed} setCollapsed={setCollapsed} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} user={user} onLogout={onLogout} />
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <Header view={view} onOpenMobile={() => setMobileOpen(true)} searchQuery={searchQuery} setSearchQuery={setSearchQuery} tasks={tasks} reminders={reminders} />
+        <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+          {(view === 'dashboard' || view === 'today') && (
+            <DateTaskPage mode={view} tasks={tasks} selectedDate={selectedDate} setSelectedDate={setSelectedDate}
+              taskCounts={taskCounts} searchQuery={searchQuery} onOpenAdd={openAdd} {...handlers} />
+          )}
+          {view === 'all' && <AllTasksPage tasks={tasks} searchQuery={searchQuery} taskCounts={taskCounts} onOpenAdd={openAdd} {...handlers} />}
+          {view === 'calendar' && <CalendarPage tasks={tasks} taskCounts={taskCounts} onOpenAdd={openAdd} {...handlers} />}
+          {view === 'completed' && <CompletedPage tasks={tasks} searchQuery={searchQuery} {...handlers} />}
+          {view === 'pending' && <PendingPage tasks={tasks} searchQuery={searchQuery} {...handlers} />}
+          {view === 'settings' && <SettingsPage tasks={tasks} onClearAll={clearAll} user={user} onLogout={onLogout} />}
+        </main>
+      </div>
+
+      <TaskFormModal open={addOpen} onClose={() => { setAddOpen(false); setEditingTask(null); }} onSubmit={submitTaskForm}
+        initial={editingTask} defaultDate={addDefaultDate} taskCounts={taskCounts} />
+      <TaskDetailsModal open={!!viewingTask} onClose={() => setViewingTask(null)} task={viewingTask}
+        onToggle={toggleComplete} onEdit={openEdit} onDelete={requestDelete} onChangeDate={(t) => setDateChangeTask(t)} />
+      <ChangeDateModal open={!!dateChangeTask} onClose={() => setDateChangeTask(null)} task={dateChangeTask} onConfirm={changeDate} taskCounts={taskCounts} />
+      <ConfirmDialog open={!!deleteTarget} title="Delete this task?" message={deleteTarget ? `"${deleteTarget.title}" will be permanently removed.` : ''}
+        confirmLabel="Delete" danger onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete} />
+    </div>
+  );
+}
+
+function App() {
+  const [currentUser, setCurrentUser] = useState(() => {
+    const sid = loadSession();
+    if (!sid) return null;
+    return loadUsers().find(u => u.id === sid) || null;
+  });
+
+  const handleAuth = (user) => setCurrentUser(user);
+  const handleLogout = () => { clearSession(); setCurrentUser(null); };
+
+  if (!currentUser) return <AuthPage onAuth={handleAuth} />;
+  return <Workspace key={currentUser.id} user={currentUser} onLogout={handleLogout} />;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
