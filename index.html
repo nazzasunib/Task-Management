@@ -529,7 +529,7 @@ function MiniCalendar({ selected, onSelect, taskCounts = {} }) {
     </div>
   );
 }
-function DateSelector({ value, onChange, taskCounts }) {
+function DateSelector({ value, onChange, taskCounts, placeholder }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
@@ -542,7 +542,7 @@ function DateSelector({ value, onChange, taskCounts }) {
       <button onClick={() => setOpen(o => !o)}
         className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-line bg-white hover:border-purpleLight text-sm font-medium text-ink shadow-card transition-colors">
         <Icon name="calendar" size={16} className="text-purple" />
-        {fmtShort(value)}
+        {value ? fmtShort(value) : (placeholder || fmtShort(todayKey()))}
         <Icon name="chevronDown" size={14} className="text-slateText" />
       </button>
       {open && (
@@ -1172,7 +1172,7 @@ function StatsRow({ tasks }) {
 }
 
 /* ======================= FILTER BAR ======================= */
-function FilterBar({ status, setStatus, priority, setPriority, sortBy, setSortBy, sortDir, setSortDir }) {
+function FilterBar({ status, setStatus, priority, setPriority, date, setDate, taskCounts, sortBy, setSortBy, sortDir, setSortDir }) {
   const selCls = "text-sm rounded-xl border border-line bg-white px-3 py-2 text-ink outline-none focus:border-purple";
   return (
     <div className="flex flex-wrap items-center gap-2 mb-5">
@@ -1189,6 +1189,14 @@ function FilterBar({ status, setStatus, priority, setPriority, sortBy, setSortBy
         <option value="Medium">Medium Priority</option>
         <option value="Low">Low Priority</option>
       </select>
+      <div className="flex items-center gap-1">
+        <DateSelector value={date} onChange={setDate} taskCounts={taskCounts} placeholder="All Dates" />
+        {date && (
+          <button onClick={() => setDate(null)} title="Clear date filter" className="p-2 rounded-xl border border-line bg-white text-slateText hover:text-purple hover:border-purpleLight transition-colors">
+            <Icon name="x" size={14} />
+          </button>
+        )}
+      </div>
       <div className="flex items-center gap-1.5 text-slateText ml-2 mr-1"><span className="text-xs font-semibold uppercase tracking-wide">Sort</span></div>
       <select className={selCls} value={sortBy} onChange={e => setSortBy(e.target.value)}>
         <option value="date">Due Date</option>
@@ -1203,7 +1211,7 @@ function FilterBar({ status, setStatus, priority, setPriority, sortBy, setSortBy
     </div>
   );
 }
-function applyFilterSort(tasks, { status, priority, sortBy, sortDir, query }) {
+function applyFilterSort(tasks, { status, priority, date, sortBy, sortDir, query }) {
   let out = tasks;
   if (query && query.trim()) {
     const q = query.trim().toLowerCase();
@@ -1213,6 +1221,7 @@ function applyFilterSort(tasks, { status, priority, sortBy, sortDir, query }) {
   else if (status === 'completed') out = out.filter(t => t.status === 'completed');
   else if (status === 'rolled') out = out.filter(t => t.isRolledOver && t.status !== 'completed');
   if (priority !== 'all') out = out.filter(t => t.priority === priority);
+  if (date) out = out.filter(t => t.currentDate === date);
   const pWeight = { High: 3, Medium: 2, Low: 1 };
   const sWeight = { pending: 1, 'rolled-over': 1.5, completed: 2 };
   out = [...out].sort((a, b) => {
@@ -1370,21 +1379,25 @@ function DashboardPage({ tasks, rangeFrom, rangeTo, setRangeFrom, setRangeTo, ta
 function AllTasksPage({ tasks, searchQuery, taskCounts, onOpenAdd, ...handlers }) {
   const [status, setStatus] = useState('all');
   const [priority, setPriority] = useState('all');
+  const [date, setDate] = useState(null);
   const [sortBy, setSortBy] = useState('date');
   const [sortDir, setSortDir] = useState('asc');
-  const filtered = applyFilterSort(tasks, { status, priority, sortBy, sortDir, query: searchQuery });
+  const filtered = applyFilterSort(tasks, { status, priority, date, sortBy, sortDir, query: searchQuery });
 
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
-        <p className="text-sm text-slateText">{filtered.length} of {tasks.length} tasks</p>
-        <button onClick={() => onOpenAdd(todayKey())} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple text-white text-sm font-semibold shadow-card hover:bg-purple/90">
+        <p className="text-sm text-slateText">
+          {filtered.length} of {tasks.length} tasks
+          {date && <span> · <span className="font-semibold text-ink">{fmtLong(date)}</span></span>}
+        </p>
+        <button onClick={() => onOpenAdd(date || todayKey())} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple text-white text-sm font-semibold shadow-card hover:bg-purple/90">
           <Icon name="plus" size={16} /> Add New Task
         </button>
       </div>
-      <FilterBar {...{ status, setStatus, priority, setPriority, sortBy, setSortBy, sortDir, setSortDir }} />
+      <FilterBar {...{ status, setStatus, priority, setPriority, date, setDate, taskCounts, sortBy, setSortBy, sortDir, setSortDir }} />
       {filtered.length === 0 ? (
-        <EmptyState icon="search" title="No tasks match" subtitle="Try adjusting your filters or search." />
+        <EmptyState icon="search" title="No tasks match" subtitle={date ? `Nothing scheduled for ${fmtLong(date)}. Try another date or add a task.` : "Try adjusting your filters or search."} />
       ) : (
         <div className="space-y-2.5">{filtered.map(t => <TaskCard key={t.id} task={t} {...handlers} />)}</div>
       )}
