@@ -1312,7 +1312,7 @@ function DashboardPage({ tasks, rangeFrom, rangeTo, setRangeFrom, setRangeTo, ta
   const grouped = useMemo(() => {
     const byDate = {};
     rangeTasks.forEach(t => { (byDate[t.currentDate] = byDate[t.currentDate] || []).push(t); });
-    return Object.keys(byDate).sort().map(k => ({ key: k, list: byDate[k] }));
+    return Object.keys(byDate).sort().reverse().map(k => ({ key: k, list: byDate[k] }));
   }, [rangeTasks]);
 
   return (
@@ -1730,7 +1730,7 @@ function SummaryPage({ tasks, user }) {
       {summary.dates.length === 0 ? (
         <EmptyState icon="fileText" title="Nothing in this range" subtitle="Pick a different date range to see a summary of your tasks." />
       ) : (
-        summary.dates.map(dateKey => (
+        [...summary.dates].reverse().map(dateKey => (
           <div key={dateKey} className="mb-6">
             <p className="font-display font-semibold text-ink mb-2.5 px-1">{fmtLong(dateKey)}</p>
             <div className="bg-white border border-line rounded-2xl overflow-hidden shadow-card">
