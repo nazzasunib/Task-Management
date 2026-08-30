@@ -1685,17 +1685,22 @@ function OnTimeLateBar({ completed, onTime, late }) {
   );
 }
 function SummaryPage({ tasks, user }) {
-  const [from, setFrom] = useState(addDays(todayKey(), -6));
+  const [from, setFrom] = useState(firstOfMonthKey(todayKey()));
   const [to, setTo] = useState(todayKey());
+  const [includePersonal, setIncludePersonal] = useState(false);
   const [error, setError] = useState('');
   const [generating, setGenerating] = useState(false);
   const summary = useMemo(() => buildSummaryRange(tasks, from, to), [tasks, from, to]);
+  const pdfSummary = useMemo(() => {
+    const pdfTasks = includePersonal ? tasks : tasks.filter(t => t.category !== 'Personal');
+    return buildSummaryRange(pdfTasks, from, to);
+  }, [tasks, from, to, includePersonal]);
 
   const generate = () => {
     setError('');
     setGenerating(true);
     try {
-      downloadSummaryPdf({ user, from, to, ...summary });
+      downloadSummaryPdf({ user, from, to, ...pdfSummary });
     } catch (e) {
       setError('Could not generate the PDF — check your internet connection (the PDF library loads from a CDN) and try again.');
     }
@@ -1720,6 +1725,11 @@ function SummaryPage({ tasks, user }) {
             <Icon name="download" size={15} /> {generating ? 'Preparing…' : 'Download PDF'}
           </button>
         </div>
+        <label className="flex items-center gap-2 mt-4 text-sm text-slateText cursor-pointer select-none">
+          <input type="checkbox" checked={includePersonal} onChange={e => setIncludePersonal(e.target.checked)}
+            className="w-4 h-4 rounded border-line text-purple focus:ring-purple" />
+          Include Personal tasks in the downloaded PDF
+        </label>
         {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
       </div>
 
