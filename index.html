@@ -103,6 +103,27 @@ const ICON_PATHS = {
   paperclip: <path d="M8 12.5 15.3 5.2a3.2 3.2 0 0 1 4.5 4.5L11 18.5a5 5 0 0 1-7-7L12.8 3"/>,
   image: <><rect x="3" y="3.5" width="18" height="17" rx="2.5"/><circle cx="8.5" cy="9" r="1.6"/><path d="m5 17 4.5-4.5a2 2 0 0 1 2.8 0L16 16"/><path d="m14.5 14.5 1-1a2 2 0 0 1 2.8 0L21 16.5"/></>,
   rangeArrow: <path d="M5 12h13m0 0-4.5-4.5M18 12l-4.5 4.5"/>,
+  notebook: <><path d="M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M9 3v18"/><path d="M4.5 7h1.5"/><path d="M4.5 11h1.5"/><path d="M4.5 15h1.5"/></>,
+  star: <path d="m12 3 2.7 5.9 6.3.7-4.7 4.4 1.3 6.3L12 17.2 6.4 20.3l1.3-6.3-4.7-4.4 6.3-.7L12 3Z"/>,
+  pin: <><path d="M12 2.5c2.4 0 4.3 2 4.3 4.4 0 2.7-2.6 5.4-4.3 8.6-1.7-3.2-4.3-5.9-4.3-8.6 0-2.4 2-4.4 4.3-4.4Z"/><path d="M12 15.5V21.5"/></>,
+  grid: <><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.6"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="1.6"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="1.6"/><rect x="13" y="13" width="7.5" height="7.5" rx="1.6"/></>,
+  archive: <><rect x="3" y="4" width="18" height="4.5" rx="1.2"/><path d="M4.5 8.5V19a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1V8.5"/><path d="M10 13h4"/></>,
+  copy: <><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></>,
+  link: <><path d="M9.5 14.5 14.5 9.5"/><path d="M11 6.5 12.6 5a3.6 3.6 0 0 1 5 5l-1.5 1.6"/><path d="M13 17.5 11.4 19a3.6 3.6 0 0 1-5-5l1.5-1.6"/></>,
+  history: <><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4.5H7.5"/><path d="M12 8v4.5l3 2"/></>,
+  share: <><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.7 7.6-4.4"/><path d="m8.2 13.3 7.6 4.4"/></>,
+  tag: <><path d="M3.5 11.2 12 2.7l7.3 7.3-8.5 8.5a1.5 1.5 0 0 1-2.1 0l-5.2-5.2a1.5 1.5 0 0 1 0-2.1Z"/><circle cx="15.2" cy="7.8" r="1.3" fill="currentColor"/></>,
+  more: <><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></>,
+  quote: <><path d="M7.5 8.5C5.6 8.5 4 10.1 4 12v3.5h5V11H6.2c.2-1 1-1.5 1.8-1.5V8.5Z"/><path d="M16.5 8.5c-1.9 0-3.5 1.6-3.5 3.5v3.5h5V11h-2.8c.2-1 1-1.5 1.8-1.5V8.5Z"/></>,
+  code: <><path d="m9 8-4.5 4L9 16"/><path d="m15 8 4.5 4-4.5 4"/></>,
+  table: <><rect x="3.5" y="4.5" width="17" height="15" rx="1.6"/><path d="M3.5 10h17"/><path d="M3.5 15h17"/><path d="M10 4.5v15"/></>,
+  play: <path d="M8 5.5v13l11-6.5-11-6.5Z" fill="currentColor" stroke="none"/>,
+  bookOpen: <><path d="M12 6.5c-1.6-1.3-4-2-6.5-2A2 2 0 0 0 3.5 6.5V17a2 2 0 0 0 2 2c2.2 0 4.6.6 6 1.8V6.5Z"/><path d="M12 6.5c1.6-1.3 4-2 6.5-2a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2c-2.2 0-4.6.6-6 1.8V6.5Z"/></>,
+  briefcase: <><rect x="3" y="7.5" width="18" height="12" rx="2"/><path d="M8.5 7.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1.5"/><path d="M3 12.5h18"/></>,
+  bulb: <><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.45 1 1.15 1 1.9V16h5v-.2c0-.75.4-1.45 1-1.9A6 6 0 0 0 12 3Z"/></>,
+  bookmark: <path d="M6.5 3.5h11a1 1 0 0 1 1 1V21l-6.5-4-6.5 4V4.5a1 1 0 0 1 1-1Z"/>,
+  users: <><circle cx="9" cy="8" r="3.2"/><path d="M2.8 19a6.2 6.2 0 0 1 12.4 0"/><path d="M16 5.3a3.2 3.2 0 0 1 0 6.1"/><path d="M18.5 13.5a6.2 6.2 0 0 1 3.7 5.5"/></>,
+  italic: <><path d="M11.5 4.5h6"/><path d="M6.5 19.5h6"/><path d="M13 4.5 11 19.5"/></>,
 };
 function Icon({ name, size = 18, className = '', strokeWidth = 2 }) {
   return (
@@ -144,6 +165,7 @@ const NAV_ITEMS = [
   { key: 'completed', label: 'Completed', icon: 'checkCircle' },
   { key: 'pending', label: 'Pending', icon: 'clock' },
   { key: 'summary', label: 'Summary', icon: 'fileText' },
+  { key: 'notes', label: 'Notes', icon: 'notebook' },
   { key: 'settings', label: 'Settings', icon: 'settings' },
 ];
 
@@ -1060,7 +1082,7 @@ function NotificationDropdown({ tasks, reminders = [] }) {
   );
 }
 function Header({ view, onOpenMobile, searchQuery, setSearchQuery, tasks, reminders, user, onGoSettings }) {
-  const titleMap = { dashboard: 'Dashboard', today: "Today's Tasks", all: 'All Tasks', calendar: 'Calendar', completed: 'Completed Tasks', pending: 'Pending Tasks', summary: 'Summary', settings: 'Settings' };
+  const titleMap = { dashboard: 'Dashboard', today: "Today's Tasks", all: 'All Tasks', calendar: 'Calendar', completed: 'Completed Tasks', pending: 'Pending Tasks', summary: 'Summary', notes: 'Notes', settings: 'Settings' };
   const [mobileSearch, setMobileSearch] = useState(false);
   return (
     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-line px-4 md:px-8 py-4 flex items-center justify-between gap-3">
@@ -1925,6 +1947,22 @@ function Workspace({ user, onLogout, onUpdateUser }) {
 
   const handlers = { onToggle: toggleComplete, onEdit: openEdit, onDelete: requestDelete, onOpen: openDetails };
 
+  // Bridges the Notes/Knowledge Hub module to the task list: turns one or more
+  // checklist lines from a note into real tasks, tagged with their source note
+  // so NotesPage can show "Related Tasks" and reflect completion back.
+  const createTasksFromChecklist = (items, sourceNote) => {
+    const created = items.map(item => makeTask({
+      title: item.text,
+      description: sourceNote ? `From note: ${sourceNote.title}` : '',
+      category: 'Work',
+      priority: 'Medium',
+      date: todayKey(),
+      noteRef: sourceNote ? { noteId: sourceNote.id, itemId: item.id } : null,
+    }));
+    setTasks(prev => [...prev, ...created]);
+    return created;
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-bg font-body">
       <Sidebar view={view} setView={setView} collapsed={collapsed} setCollapsed={setCollapsed} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} user={user} onLogout={onLogout} />
@@ -1944,6 +1982,7 @@ function Workspace({ user, onLogout, onUpdateUser }) {
           {view === 'completed' && <CompletedPage tasks={tasks} searchQuery={searchQuery} {...handlers} />}
           {view === 'pending' && <PendingPage tasks={tasks} searchQuery={searchQuery} {...handlers} />}
           {view === 'summary' && <SummaryPage tasks={tasks} user={user} />}
+          {view === 'notes' && <NotesPage user={user} onCreateTasksFromChecklist={createTasksFromChecklist} />}
           {view === 'settings' && <SettingsPage tasks={tasks} onClearAll={clearAll} user={user} onLogout={onLogout} onUpdateUser={onUpdateUser} />}
         </main>
       </div>
@@ -1955,6 +1994,958 @@ function Workspace({ user, onLogout, onUpdateUser }) {
       <ChangeDateModal open={!!dateChangeTask} onClose={() => setDateChangeTask(null)} task={dateChangeTask} onConfirm={changeDate} taskCounts={taskCounts} />
       <ConfirmDialog open={!!deleteTarget} title="Delete this task?" message={deleteTarget ? `"${deleteTarget.title}" will be permanently removed.` : ''}
         confirmLabel="Delete" danger onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete} />
+    </div>
+  );
+}
+
+/* ======================= NOTES / KNOWLEDGE HUB ======================= */
+const notesKey = userId => `momentum.notes.${userId}.v1`;
+
+const NOTE_CATEGORIES = [
+  { key: 'General', icon: 'bookOpen', desc: 'Everyday notes that don’t fit elsewhere yet.' },
+  { key: 'Onboarding', icon: 'users', desc: 'Guides for bringing new people up to speed.' },
+  { key: 'SOP / Processes', icon: 'settings', desc: 'Step-by-step standard operating procedures.' },
+  { key: 'Events', icon: 'calendar', desc: 'Playbooks for planning and running events.' },
+  { key: 'Sales & Marketing', icon: 'trend', desc: 'Campaigns, outreach and follow-up processes.' },
+  { key: 'Company Operations', icon: 'briefcase', desc: 'How the business runs day to day.' },
+  { key: 'Checklists', icon: 'checkSquare', desc: 'Reusable step lists for recurring situations.' },
+  { key: 'Ideas', icon: 'bulb', desc: 'Rough thoughts worth revisiting later.' },
+  { key: 'Guidelines', icon: 'bookOpen', desc: 'Standards and best practices to follow.' },
+  { key: 'Reference', icon: 'bookmark', desc: 'Facts and information looked up often.' },
+];
+
+const NOTE_TYPES = [
+  { key: 'standard', label: 'Standard Note', icon: 'fileText', tone: 'soft' },
+  { key: 'sop', label: 'SOP / Process', icon: 'settings', tone: 'navy' },
+  { key: 'checklist', label: 'Checklist', icon: 'checkSquare', tone: 'purple' },
+  { key: 'onboarding', label: 'Onboarding Guide', icon: 'users', tone: 'emerald' },
+  { key: 'event', label: 'Event Plan', icon: 'calendar', tone: 'purple' },
+  { key: 'meeting', label: 'Meeting Note', icon: 'briefcase', tone: 'navy' },
+  { key: 'reference', label: 'Reference', icon: 'bookmark', tone: 'soft' },
+  { key: 'template', label: 'Template', icon: 'copy', tone: 'soft' },
+];
+const noteTypeMeta = key => NOTE_TYPES.find(t => t.key === key) || NOTE_TYPES[0];
+
+function makeChecklistItems(lines) {
+  return lines.map(text => ({ id: uid(), text, done: false }));
+}
+function makeNote(overrides) {
+  const now = new Date().toISOString();
+  return {
+    id: uid(),
+    title: '',
+    description: '',
+    category: 'General',
+    noteType: 'standard',
+    tags: [],
+    priority: 'Medium',
+    author: overrides.author || '',
+    content: '',
+    checklist: [],
+    favorite: false,
+    pinned: false,
+    isTemplate: false,
+    templateUsedCount: 0,
+    archived: false,
+    relatedNoteIds: [],
+    createdAt: now,
+    updatedAt: now,
+    lastUsedAt: null,
+    sourceTemplateId: null,
+    history: [],
+    ...overrides,
+  };
+}
+
+function seedNotes(author) {
+  const daysAgo = n => new Date(Date.now() - n * 86400000).toISOString();
+  const onboardingChecklist = makeChecklistItems([
+    'Introduce company overview', 'Explain company culture', 'Explain organizational structure',
+    'Introduce team members', 'Explain working hours', 'Explain communication channels',
+    'Explain task management system', 'Explain leave policy', 'Explain reporting structure',
+    'Provide necessary access', 'Explain daily workflow', 'Explain performance expectations',
+    'Complete onboarding feedback',
+  ]);
+  onboardingChecklist[0].done = true; onboardingChecklist[1].done = true; onboardingChecklist[2].done = true;
+  onboardingChecklist[3].done = true; onboardingChecklist[4].done = true; onboardingChecklist[5].done = true;
+  onboardingChecklist[6].done = true; onboardingChecklist[7].done = true;
+
+  const eventChecklist = makeChecklistItems([
+    'Confirm venue', 'Prepare banners', 'Prepare brochures', 'Prepare company profile',
+    'Prepare registration form', 'Assign team members', 'Prepare transportation',
+    'Prepare promotional materials', 'Confirm schedule', 'Prepare attendance sheet',
+    'Take photos', 'Collect leads', 'Submit event report',
+  ]);
+  eventChecklist[0].done = true; eventChecklist[1].done = true; eventChecklist[5].done = true;
+
+  const notes = [
+    makeNote({
+      title: 'New Employee Onboarding Checklist', category: 'Onboarding', noteType: 'onboarding',
+      tags: ['HR', 'Onboarding', 'Template'], author, isTemplate: true, pinned: true, favorite: true,
+      description: 'Complete everything needed when a new employee joins.',
+      content: 'Follow this checklist during a new hire’s first week. Assign an owner for each step and confirm access is provisioned before day one.',
+      checklist: onboardingChecklist, templateUsedCount: 6, createdAt: daysAgo(120), updatedAt: daysAgo(2), lastUsedAt: daysAgo(9),
+    }),
+    makeNote({
+      title: 'Event Planning Master Checklist', category: 'Events', noteType: 'event',
+      tags: ['Events', 'Template', 'Planning'], author, isTemplate: true, pinned: true,
+      description: 'Reusable master checklist for running any company event end-to-end.',
+      content: 'Overview: use this as the starting point for any external or internal event. Duplicate it, then update the event-specific sections below.',
+      checklist: eventChecklist, templateUsedCount: 4, createdAt: daysAgo(200), updatedAt: daysAgo(5), lastUsedAt: daysAgo(20),
+    }),
+    makeNote({
+      title: 'University Career Fair', category: 'Events', noteType: 'event',
+      tags: ['Events', 'Recruiting'], author, favorite: true,
+      description: 'Preparation plan for the annual university career fair booth.',
+      content: 'Overview: represent the company at Green University’s career fair. Objective: generate 50+ qualified leads and 10 internship applicants.',
+      checklist: makeChecklistItems(['Confirm venue', 'Prepare banners', 'Prepare brochures', 'Assign team members', 'Prepare transportation', 'Collect leads']),
+      createdAt: daysAgo(14), updatedAt: daysAgo(1),
+    }),
+    makeNote({
+      title: 'Monthly Marketing Meeting Template', category: 'Sales & Marketing', noteType: 'meeting',
+      tags: ['Marketing', 'Meeting', 'Template'], author, isTemplate: true,
+      description: 'Standard agenda for the recurring monthly marketing sync.',
+      content: 'Agenda: 1) Review last month’s campaign performance. 2) Content calendar walkthrough. 3) Budget check-in. 4) Open discussion.',
+      templateUsedCount: 11, createdAt: daysAgo(300), updatedAt: daysAgo(30), lastUsedAt: daysAgo(3),
+    }),
+    makeNote({
+      title: 'New Client Onboarding Process', category: 'SOP / Processes', noteType: 'sop',
+      tags: ['Sales', 'SOP', 'Clients'], author,
+      description: 'Standard process for onboarding a new client from signed contract to kickoff.',
+      content: 'Purpose: ensure every new client has a consistent, professional onboarding experience.\n\nSteps:\n1. Send welcome email within 24 hours of signing.\n2. Schedule kickoff call.\n3. Set up client workspace and access.\n4. Assign account manager.\n5. Share onboarding timeline.\n\nCommon Mistakes: forgetting to confirm billing details before kickoff.',
+      createdAt: daysAgo(60), updatedAt: daysAgo(6),
+    }),
+    makeNote({
+      title: 'Social Media Campaign Checklist', category: 'Checklists', noteType: 'checklist',
+      tags: ['Marketing', 'Social', 'Checklist'], author,
+      description: 'Steps to launch a new social media campaign.',
+      checklist: makeChecklistItems(['Define campaign goal', 'Draft creative brief', 'Design assets', 'Schedule posts', 'Brief community team', 'Review analytics after 1 week']),
+      createdAt: daysAgo(25), updatedAt: daysAgo(4),
+    }),
+    makeNote({
+      title: 'Office Event Preparation', category: 'Events', noteType: 'checklist',
+      tags: ['Events', 'Office'], author,
+      description: 'Quick checklist for internal office events and celebrations.',
+      checklist: makeChecklistItems(['Book space', 'Order catering', 'Send calendar invite', 'Prepare music/playlist', 'Assign cleanup crew']),
+      createdAt: daysAgo(40), updatedAt: daysAgo(10),
+    }),
+    makeNote({
+      title: 'Sales Follow-up Process', category: 'SOP / Processes', noteType: 'sop',
+      tags: ['Sales', 'SOP'], author,
+      description: 'When and how to follow up with warm leads.',
+      content: 'Purpose: keep leads warm without being pushy.\n\nSteps:\n1. Follow up within 24 hours of first contact.\n2. Send a value-add resource on day 3.\n3. Call on day 7 if no response.\n4. Mark as cold after 3 unanswered attempts.',
+      createdAt: daysAgo(80), updatedAt: daysAgo(15),
+    }),
+    makeNote({
+      title: 'Company Introduction Guide', category: 'General', noteType: 'reference',
+      tags: ['Company', 'Reference'], author,
+      description: 'A short overview of who we are, useful when briefing partners or new hires.',
+      content: 'Founded to help teams manage tasks and knowledge in one place. Core values: clarity, ownership, and continuous improvement.',
+      createdAt: daysAgo(400), updatedAt: daysAgo(60),
+    }),
+    makeNote({
+      title: 'Employee Exit Checklist', category: 'Onboarding', noteType: 'checklist',
+      tags: ['HR', 'Offboarding', 'Checklist'], author,
+      description: 'Ensure a smooth, secure offboarding when someone leaves the company.',
+      checklist: makeChecklistItems(['Revoke system access', 'Collect company equipment', 'Conduct exit interview', 'Update org chart', 'Notify payroll']),
+      createdAt: daysAgo(90), updatedAt: daysAgo(45),
+    }),
+  ];
+  // link a few notes together to demonstrate the relationship system
+  const byTitle = t => notes.find(n => n.title === t);
+  byTitle('University Career Fair').relatedNoteIds = [byTitle('Event Planning Master Checklist').id, byTitle('Social Media Campaign Checklist').id];
+  byTitle('Event Planning Master Checklist').relatedNoteIds = [byTitle('University Career Fair').id];
+  return notes;
+}
+
+function loadNotes(userId, author) {
+  try {
+    const raw = localStorage.getItem(notesKey(userId));
+    if (raw) return JSON.parse(raw);
+    const seeded = seedNotes(author);
+    localStorage.setItem(notesKey(userId), JSON.stringify(seeded));
+    return seeded;
+  } catch (e) { return seedNotes(author); }
+}
+function persistNotes(notes, userId) {
+  try { localStorage.setItem(notesKey(userId), JSON.stringify(notes)); } catch (e) {}
+}
+function timeAgo(iso) {
+  if (!iso) return '';
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.round(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min${mins === 1 ? '' : 's'} ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs} hour${hrs === 1 ? '' : 's'} ago`;
+  const days = Math.round(hrs / 24);
+  if (days < 30) return `${days} day${days === 1 ? '' : 's'} ago`;
+  const months = Math.round(days / 30);
+  if (months < 12) return `${months} month${months === 1 ? '' : 's'} ago`;
+  const years = Math.round(months / 12);
+  return `${years} year${years === 1 ? '' : 's'} ago`;
+}
+function checklistProgress(items) {
+  if (!items || !items.length) return null;
+  const done = items.filter(i => i.done).length;
+  return { done, total: items.length, pct: Math.round((done / items.length) * 100) };
+}
+
+/* ---- Note type badge ---- */
+function NoteTypeBadge({ noteType }) {
+  const meta = noteTypeMeta(noteType);
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-navy/5 text-navy whitespace-nowrap">
+      <Icon name={meta.icon} size={11} />{meta.label}
+    </span>
+  );
+}
+
+/* ---- Small stat card for the top of the Notes dashboard ---- */
+function NoteStatCard({ icon, tone, label, value }) {
+  return (
+    <div className="rounded-2xl border border-line bg-white p-4 flex items-center gap-3 shadow-card hover:shadow-pop transition-shadow">
+      <IconBadge icon={icon} tone={tone} size={40} iconSize={18} />
+      <div className="min-w-0">
+        <p className="font-display font-bold text-lg text-ink leading-none">{value}</p>
+        <p className="text-xs text-slateText mt-1 truncate">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ---- Category card grid ---- */
+function CategoryCard({ cat, count, active, onClick }) {
+  return (
+    <button onClick={onClick}
+      className={`text-left rounded-2xl border p-4 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-pop
+        ${active ? 'border-purple bg-purple/5 shadow-card' : 'border-line bg-white/80 backdrop-blur shadow-card'}`}>
+      <div className="flex items-center justify-between mb-2.5">
+        <IconBadge icon={cat.icon} tone={active ? 'purple' : 'soft'} size={38} iconSize={17} />
+        <span className="text-xs font-semibold text-slateText bg-slate-100 rounded-full px-2 py-0.5">{count}</span>
+      </div>
+      <p className="font-display font-semibold text-sm text-ink leading-tight">{cat.key}</p>
+      <p className="text-[11px] text-slateText mt-1 leading-snug line-clamp-2">{cat.desc}</p>
+    </button>
+  );
+}
+
+/* ---- Smart note card ---- */
+function NoteCard({ note, onOpen, onToggleFavorite, onTogglePin }) {
+  const cat = NOTE_CATEGORIES.find(c => c.key === note.category) || NOTE_CATEGORIES[0];
+  const progress = checklistProgress(note.checklist);
+  return (
+    <div onClick={onOpen}
+      className="group cursor-pointer rounded-2xl border border-line bg-white/90 backdrop-blur p-5 shadow-card hover:shadow-pop hover:-translate-y-0.5 transition-all duration-150 flex flex-col">
+      <div className="flex items-center justify-between mb-3">
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-purple uppercase">
+          <Icon name={cat.icon} size={12} />{note.category}
+        </span>
+        {note.isTemplate && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purpleLight/20 text-purple">Template</span>}
+      </div>
+      <h3 className="font-display font-bold text-[15px] text-ink leading-snug mb-1.5 line-clamp-2">{note.title}</h3>
+      <p className="text-[13px] text-slateText leading-snug line-clamp-2 mb-3">{note.description || 'No description yet.'}</p>
+
+      {progress && (
+        <div className="mb-3">
+          <ProgressBar value={progress.pct} className="h-2" />
+          <p className="text-[11px] text-slateText mt-1 font-medium">{progress.done} / {progress.total} completed &middot; {progress.pct}%</p>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        <NoteTypeBadge noteType={note.noteType} />
+        {note.tags.slice(0, 2).map(t => <span key={t} className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slateText">#{t}</span>)}
+      </div>
+
+      <div className="mt-auto pt-3 border-t border-line flex items-center justify-between">
+        <p className="text-[11px] text-slateText truncate">Updated {timeAgo(note.updatedAt)} &middot; {note.author}</p>
+        <div className="flex items-center gap-0.5 shrink-0">
+          <button onClick={e => { e.stopPropagation(); onTogglePin(note.id); }} title={note.pinned ? 'Unpin' : 'Pin'}
+            className={`p-1.5 rounded-lg transition-colors ${note.pinned ? 'text-purple' : 'text-slate-300 hover:text-purple'}`}>
+            <Icon name="pin" size={14} />
+          </button>
+          <button onClick={e => { e.stopPropagation(); onToggleFavorite(note.id); }} title={note.favorite ? 'Unfavorite' : 'Favorite'}
+            className={`p-1.5 rounded-lg transition-colors ${note.favorite ? 'text-amber-400' : 'text-slate-300 hover:text-amber-400'}`}>
+            <Icon name="star" size={14} className={note.favorite ? 'fill-current' : ''} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---- Empty state ---- */
+function NotesEmptyState({ onCreate }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center py-20 px-6">
+      <IconBadge icon="notebook" size={64} iconSize={28} tone="soft" className="rounded-2xl mb-5" />
+      <h3 className="font-display font-bold text-lg text-ink mb-1.5">Your knowledge hub is empty.</h3>
+      <p className="text-sm text-slateText max-w-sm mb-6">Start capturing processes, ideas and reusable checklists so your team never solves the same problem twice.</p>
+      <button onClick={onCreate} className="inline-flex items-center gap-2 bg-purple hover:bg-purple/90 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-card transition-colors">
+        <Icon name="plus" size={16} />Create Your First Note
+      </button>
+    </div>
+  );
+}
+
+/* ---- Note type picker (used inside the create/edit modal) ---- */
+function NoteTypePicker({ value, onChange }) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      {NOTE_TYPES.map(t => {
+        const active = value === t.key;
+        return (
+          <button type="button" key={t.key} onClick={() => onChange(t.key)}
+            className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-center transition-colors
+              ${active ? 'border-purple bg-purple/5' : 'border-line bg-bg hover:bg-slate-100'}`}>
+            <IconBadge icon={t.icon} tone={active ? 'purple' : 'soft'} size={30} iconSize={14} />
+            <span className={`text-[11px] font-semibold leading-tight ${active ? 'text-purple' : 'text-slateText'}`}>{t.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---- Tag editor ---- */
+function TagEditor({ tags, onChange }) {
+  const [input, setInput] = useState('');
+  const addTag = () => {
+    const v = input.trim().replace(/^#/, '');
+    if (v && !tags.includes(v)) onChange([...tags, v]);
+    setInput('');
+  };
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {tags.map(t => (
+          <span key={t} className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-full bg-purpleLight/15 text-purple">
+            #{t}
+            <button type="button" onClick={() => onChange(tags.filter(x => x !== t))} className="hover:text-purple/70"><Icon name="x" size={10} /></button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
+          placeholder="Add a tag and press Enter" className={inputCls} />
+        <button type="button" onClick={addTag} className="px-3 rounded-xl border border-line text-sm font-medium text-slateText hover:bg-slate-100 shrink-0">Add</button>
+      </div>
+    </div>
+  );
+}
+
+/* ---- Interactive checklist editor (used both in create/edit and in details view) ---- */
+function ChecklistEditor({ items, onChange, onConvertItem, onConvertAll, dense }) {
+  const [draft, setDraft] = useState('');
+  const progress = checklistProgress(items);
+  const addItem = () => {
+    const v = draft.trim();
+    if (!v) return;
+    onChange([...items, { id: uid(), text: v, done: false }]);
+    setDraft('');
+  };
+  const toggle = id => onChange(items.map(i => i.id === id ? { ...i, done: !i.done } : i));
+  const remove = id => onChange(items.filter(i => i.id !== id));
+  return (
+    <div>
+      {progress && (
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-xs font-semibold text-slateText">{progress.done} / {progress.total} completed</p>
+            <p className="text-xs font-bold text-purple">{progress.pct}%</p>
+          </div>
+          <ProgressBar value={progress.pct} className="h-2.5" />
+        </div>
+      )}
+      <div className={dense ? 'space-y-1' : 'space-y-1.5'}>
+        {items.map(item => (
+          <div key={item.id} className="group flex items-center gap-2.5 py-1.5 px-2 rounded-lg hover:bg-slate-50">
+            <button type="button" onClick={() => toggle(item.id)}
+              className={`shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors
+                ${item.done ? 'bg-purple border-purple text-white' : 'border-line text-transparent hover:border-purple'}`}>
+              <Icon name="checkSquare" size={11} />
+            </button>
+            <span className={`flex-1 text-sm ${item.done ? 'line-through text-slate-400' : 'text-ink'}`}>{item.text}</span>
+            {onConvertItem && !item.done && (
+              <button type="button" onClick={() => onConvertItem(item)} title="Convert to Task"
+                className="opacity-0 group-hover:opacity-100 shrink-0 text-[11px] font-semibold text-purple hover:underline transition-opacity">
+                Convert to Task
+              </button>
+            )}
+            {onChange && (
+              <button type="button" onClick={() => remove(item.id)} className="opacity-0 group-hover:opacity-100 shrink-0 text-slate-300 hover:text-rose-500 transition-opacity">
+                <Icon name="x" size={13} />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      {onChange && (
+        <div className="flex gap-2 mt-2">
+          <input value={draft} onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }}
+            placeholder="Add a checklist item and press Enter" className={inputCls} />
+          <button type="button" onClick={addItem} className="px-3 rounded-xl border border-line text-sm font-medium text-slateText hover:bg-slate-100 shrink-0">Add</button>
+        </div>
+      )}
+      {onConvertAll && items.some(i => !i.done) && (
+        <button type="button" onClick={() => onConvertAll(items.filter(i => !i.done))}
+          className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-purple hover:underline">
+          <Icon name="arrowRight" size={13} />Create Tasks from Checklist
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ---- Rich-ish content toolbar: lightweight formatting helpers over a textarea, using
+   markdown-style tokens so content stays plain, portable JSON — no contentEditable HTML
+   soup to sanitize or persist. */
+function ContentToolbar({ onInsert }) {
+  const tools = [
+    { icon: 'edit', label: 'Heading', wrap: ['## ', ''] },
+    { icon: 'sparkle', label: 'Bold', wrap: ['**', '**'] },
+    { icon: 'italic', label: 'Italic', wrap: ['_', '_'] },
+    { icon: 'list', label: 'Bullet list', wrap: ['- ', ''] },
+    { icon: 'grid', label: 'Numbered list', wrap: ['1. ', ''] },
+    { icon: 'checkSquare', label: 'Checklist', wrap: ['[ ] ', ''] },
+    { icon: 'quote', label: 'Quote', wrap: ['> ', ''] },
+    { icon: 'link', label: 'Link', wrap: ['[', '](url)'] },
+    { icon: 'table', label: 'Table', wrap: ['| Col A | Col B |\n| --- | --- |\n| ', ' | |'] },
+    { icon: 'code', label: 'Code block', wrap: ['```\n', '\n```'] },
+  ];
+  return (
+    <div className="flex flex-wrap items-center gap-1 p-1.5 rounded-xl bg-bg border border-line mb-2">
+      {tools.map(t => (
+        <button key={t.label} type="button" title={t.label} onClick={() => onInsert(t.wrap)}
+          className="p-2 rounded-lg text-slateText hover:text-purple hover:bg-white transition-colors">
+          <Icon name={t.icon} size={15} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ---- Create / Edit Note modal ---- */
+function NoteFormModal({ open, onClose, onSubmit, initial, defaultCategory, user, allNotes }) {
+  const blank = () => ({
+    title: '', description: '', category: defaultCategory || 'General', noteType: 'standard',
+    tags: [], priority: 'Medium', content: '', checklist: [], relatedNoteIds: [],
+  });
+  const [form, setForm] = useState(blank());
+  const contentRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setForm(initial ? {
+      title: initial.title, description: initial.description, category: initial.category, noteType: initial.noteType,
+      tags: initial.tags, priority: initial.priority, content: initial.content, checklist: initial.checklist,
+      relatedNoteIds: initial.relatedNoteIds || [],
+    } : blank());
+  }, [open, initial]);
+
+  if (!open) return null;
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const insertToken = ([before, after]) => {
+    const ta = contentRef.current;
+    if (!ta) return;
+    const { selectionStart: s, selectionEnd: e, value } = ta;
+    const next = value.slice(0, s) + before + value.slice(s, e) + after + value.slice(e);
+    set('content', next);
+    requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(s + before.length, s + before.length + (e - s)); });
+  };
+  const showChecklist = ['checklist', 'onboarding', 'event'].includes(form.noteType);
+
+  const submit = e => {
+    e.preventDefault();
+    if (!form.title.trim()) return;
+    onSubmit(form);
+  };
+
+  const otherNotes = (allNotes || []).filter(n => !initial || n.id !== initial.id);
+
+  return (
+    <ModalShell open={open} onClose={onClose} wide>
+      <form onSubmit={submit} className="p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-display font-bold text-lg text-ink">{initial ? 'Edit Note' : 'Create New Note'}</h2>
+          <IconButton icon="x" label="Close" onClick={onClose} />
+        </div>
+
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1 -mr-1">
+          <Field label="Note Type">
+            <NoteTypePicker value={form.noteType} onChange={v => set('noteType', v)} />
+          </Field>
+
+          <Field label="Title">
+            <input value={form.title} onChange={e => set('title', e.target.value)} placeholder="e.g. New Employee Onboarding Checklist" className={inputCls} autoFocus />
+          </Field>
+
+          <Field label="Description">
+            <input value={form.description} onChange={e => set('description', e.target.value)} placeholder="One line describing what this note is for" className={inputCls} />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Category">
+              <select value={form.category} onChange={e => set('category', e.target.value)} className={inputCls}>
+                {NOTE_CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.key}</option>)}
+              </select>
+            </Field>
+            <Field label="Priority">
+              <select value={form.priority} onChange={e => set('priority', e.target.value)} className={inputCls}>
+                {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </Field>
+          </div>
+
+          <Field label="Tags">
+            <TagEditor tags={form.tags} onChange={v => set('tags', v)} />
+          </Field>
+
+          <Field label={`Content${showChecklist ? ' (details, purpose, notes)' : ''}`}>
+            <ContentToolbar onInsert={insertToken} />
+            <textarea ref={contentRef} value={form.content} onChange={e => set('content', e.target.value)} rows={7}
+              placeholder="Write the purpose, steps, requirements, links, or anything future-you will need..."
+              className={inputCls + ' font-mono text-[13px] leading-relaxed resize-none'} />
+          </Field>
+
+          {showChecklist && (
+            <Field label="Checklist">
+              <div className="rounded-xl border border-line p-3 bg-bg/60">
+                <ChecklistEditor items={form.checklist} onChange={v => set('checklist', v)} />
+              </div>
+            </Field>
+          )}
+
+          {otherNotes.length > 0 && (
+            <Field label="Related Notes">
+              <div className="flex flex-wrap gap-1.5">
+                {otherNotes.slice(0, 12).map(n => {
+                  const active = form.relatedNoteIds.includes(n.id);
+                  return (
+                    <button type="button" key={n.id}
+                      onClick={() => set('relatedNoteIds', active ? form.relatedNoteIds.filter(id => id !== n.id) : [...form.relatedNoteIds, n.id])}
+                      className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors ${active ? 'bg-purple text-white border-purple' : 'bg-white text-slateText border-line hover:border-purple/40'}`}>
+                      {n.title}
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+          )}
+
+          <p className="text-[11px] text-slateText flex items-center gap-1.5"><Icon name="user" size={12} />Author: {user.name} &middot; Autosaves when you close this form.</p>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-line">
+          <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-semibold text-slateText hover:bg-slate-100">Cancel</button>
+          <button type="submit" className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-purple hover:bg-purple/90 shadow-card">{initial ? 'Save Changes' : 'Create Note'}</button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+/* ---- Full note details view ---- */
+const SOP_SECTIONS = ['Purpose', 'Requirements', 'Steps', 'Important Notes', 'Common Mistakes', 'Related Documents'];
+const EVENT_SECTIONS = ['Overview', 'Preparation', 'Checklist', 'Team', 'Budget', 'Timeline', 'Event Day', 'Post Event'];
+
+function NoteDetails({ note, allNotes, tasks, onBack, onEdit, onToggleFavorite, onTogglePin, onDuplicate, onUseAsTemplate,
+  onDelete, onArchive, onToggleChecklistItem, onConvertItem, onConvertAll, onSaveContent }) {
+  const [savedLabel, setSavedLabel] = useState('Saved');
+  const cat = NOTE_CATEGORIES.find(c => c.key === note.category) || NOTE_CATEGORIES[0];
+  const progress = checklistProgress(note.checklist);
+  const related = (note.relatedNoteIds || []).map(id => allNotes.find(n => n.id === id)).filter(Boolean);
+  const relatedTasks = (tasks || []).filter(t => t.noteRef && t.noteRef.noteId === note.id);
+
+  useEffect(() => {
+    setSavedLabel(`Last saved ${timeAgo(note.updatedAt)}`);
+    const iv = setInterval(() => setSavedLabel(`Last saved ${timeAgo(note.updatedAt)}`), 30000);
+    return () => clearInterval(iv);
+  }, [note.updatedAt]);
+
+  const sectioned = note.noteType === 'sop' ? SOP_SECTIONS : note.noteType === 'event' ? EVENT_SECTIONS : null;
+
+  return (
+    <div className="max-w-4xl mx-auto animate-fade">
+      <button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm font-semibold text-slateText hover:text-purple mb-4">
+        <Icon name="chevronLeft" size={16} />Back to Notes
+      </button>
+
+      <div className="bg-white rounded-3xl border border-line shadow-card p-6 md:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-purple uppercase"><Icon name={cat.icon} size={12} />{note.category}</span>
+              <NoteTypeBadge noteType={note.noteType} />
+              {note.isTemplate && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purpleLight/20 text-purple">Template &middot; used {note.templateUsedCount}x</span>}
+            </div>
+            <h1 className="font-display font-bold text-2xl text-ink leading-tight">{note.title}</h1>
+            {note.description && <p className="text-sm text-slateText mt-1.5 max-w-2xl">{note.description}</p>}
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <IconButton icon="star" label="Favorite" onClick={() => onToggleFavorite(note.id)} className={note.favorite ? 'text-amber-400' : ''} />
+            <IconButton icon="pin" label="Pin" onClick={() => onTogglePin(note.id)} className={note.pinned ? 'text-purple' : ''} />
+            <IconButton icon="edit" label="Edit" onClick={() => onEdit(note)} />
+            <IconButton icon="copy" label="Duplicate" onClick={() => onDuplicate(note)} />
+            <IconButton icon="archive" label="Archive" onClick={() => onArchive(note.id)} />
+            <IconButton icon="trash" label="Delete" onClick={() => onDelete(note)} />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 text-xs text-slateText mb-5">
+          <span className="flex items-center gap-1.5"><Icon name="user" size={13} />{note.author}</span>
+          <span className="flex items-center gap-1.5"><Icon name="clock" size={13} />{savedLabel}</span>
+          <span className="flex items-center gap-1.5 text-emerald-600 font-medium"><Icon name="checkCircle" size={13} />Autosave on</span>
+        </div>
+
+        {note.isTemplate && (
+          <button onClick={() => onUseAsTemplate(note)}
+            className="w-full mb-5 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple to-purpleLight text-white text-sm font-semibold py-3 rounded-xl shadow-card hover:opacity-95 transition-opacity">
+            <Icon name="copy" size={16} />Use This Template
+          </button>
+        )}
+
+        {progress && (
+          <div className="mb-6 p-4 rounded-2xl bg-purple/5 border border-purple/10">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-semibold text-ink">{progress.done} / {progress.total} completed</p>
+              <p className="text-sm font-bold text-purple">{progress.pct}%</p>
+            </div>
+            <ProgressBar value={progress.pct} className="h-3" />
+          </div>
+        )}
+
+        {note.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-6">
+            {note.tags.map(t => <span key={t} className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slateText">#{t}</span>)}
+          </div>
+        )}
+
+        {sectioned ? (
+          <div className="grid sm:grid-cols-2 gap-4 mb-6">
+            {sectioned.map(sec => (
+              <div key={sec} className="rounded-2xl border border-line p-4 bg-bg/50">
+                <p className="font-display font-semibold text-sm text-ink mb-1.5 flex items-center gap-1.5"><Icon name="bookOpen" size={13} className="text-purple" />{sec}</p>
+                <p className="text-[13px] text-slateText leading-relaxed whitespace-pre-wrap">
+                  {sec === 'Checklist' ? '' : (note.content || 'Not documented yet — edit this note to add detail.')}
+                </p>
+                {sec === 'Checklist' && note.checklist.length > 0 && (
+                  <ChecklistEditor items={note.checklist} onChange={items => onToggleChecklistItem(note.id, items)} onConvertItem={item => onConvertItem(note, item)} dense />
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            {note.content && (
+              <div className="mb-6">
+                <p className="font-display font-semibold text-sm text-ink mb-2">Content</p>
+                <p className="text-[13.5px] text-ink leading-relaxed whitespace-pre-wrap bg-bg/50 rounded-2xl border border-line p-4">{note.content}</p>
+              </div>
+            )}
+            {note.checklist.length > 0 && (
+              <div className="mb-6">
+                <p className="font-display font-semibold text-sm text-ink mb-2">Checklist</p>
+                <div className="rounded-2xl border border-line p-4 bg-bg/50">
+                  <ChecklistEditor items={note.checklist} onChange={items => onToggleChecklistItem(note.id, items)}
+                    onConvertItem={item => onConvertItem(note, item)} onConvertAll={items => onConvertAll(note, items)} />
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {relatedTasks.length > 0 && (
+          <div className="mb-6">
+            <p className="font-display font-semibold text-sm text-ink mb-2">Related Tasks</p>
+            <div className="space-y-1.5">
+              {relatedTasks.map(t => (
+                <div key={t.id} className="flex items-center gap-2.5 text-sm px-3 py-2 rounded-xl bg-bg/60 border border-line">
+                  <Icon name={t.status === 'completed' ? 'checkCircle' : 'clock'} size={14} className={t.status === 'completed' ? 'text-emerald-600' : 'text-slateText'} />
+                  <span className={t.status === 'completed' ? 'line-through text-slate-400' : 'text-ink'}>{t.title}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {related.length > 0 && (
+          <div>
+            <p className="font-display font-semibold text-sm text-ink mb-2">Related Notes</p>
+            <div className="flex flex-wrap gap-2">
+              {related.map(r => (
+                <button key={r.id} onClick={() => onBack(r)} className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-line bg-white hover:border-purple/40 hover:text-purple text-slateText">
+                  <Icon name="link" size={12} />{r.title}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---- Main Notes Dashboard / Router ---- */
+const NOTE_FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'recent', label: 'Recent' },
+  { key: 'favorites', label: 'Favorites' },
+  { key: 'pinned', label: 'Pinned' },
+  { key: 'templates', label: 'Templates' },
+  { key: 'archived', label: 'Archived' },
+];
+
+function NotesPage({ user, onCreateTasksFromChecklist }) {
+  const [notes, setNotes] = useState(() => loadNotes(user.id, user.name));
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [activeCategory, setActiveCategory] = useState(null);
+  const [openNoteId, setOpenNoteId] = useState(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingNote, setEditingNote] = useState(null);
+  const [formCategory, setFormCategory] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => { persistNotes(notes, user.id); }, [notes, user.id]);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2400);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const notify = msg => setToast(msg);
+
+  const openNote = note => setOpenNoteId(note ? note.id : null);
+  const activeNote = notes.find(n => n.id === openNoteId) || null;
+
+  const visible = useMemo(() => {
+    let list = notes.filter(n => filter === 'archived' ? n.archived : !n.archived);
+    if (filter === 'favorites') list = list.filter(n => n.favorite);
+    if (filter === 'pinned') list = list.filter(n => n.pinned);
+    if (filter === 'templates') list = list.filter(n => n.isTemplate);
+    if (filter === 'recent') list = [...list].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 8);
+    if (activeCategory) list = list.filter(n => n.category === activeCategory);
+    if (query.trim()) {
+      const q = query.trim().toLowerCase();
+      list = list.filter(n =>
+        n.title.toLowerCase().includes(q) || n.description.toLowerCase().includes(q) ||
+        n.content.toLowerCase().includes(q) || n.category.toLowerCase().includes(q) ||
+        n.noteType.toLowerCase().includes(q) || n.tags.some(t => t.toLowerCase().includes(q)));
+    }
+    if (filter !== 'recent') list = [...list].sort((a, b) => (b.pinned - a.pinned) || b.updatedAt.localeCompare(a.updatedAt));
+    return list;
+  }, [notes, filter, activeCategory, query]);
+
+  const stats = useMemo(() => {
+    const active = notes.filter(n => !n.archived);
+    const weekAgo = Date.now() - 7 * 86400000;
+    return {
+      total: active.length,
+      templates: active.filter(n => n.isTemplate).length,
+      pinned: active.filter(n => n.pinned).length,
+      updatedThisWeek: active.filter(n => new Date(n.updatedAt).getTime() >= weekAgo).length,
+    };
+  }, [notes]);
+
+  const recentlyUpdated = useMemo(() => [...notes].filter(n => !n.archived).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 4), [notes]);
+  const pinnedNotes = useMemo(() => notes.filter(n => n.pinned && !n.archived), [notes]);
+  const topTemplates = useMemo(() => [...notes].filter(n => n.isTemplate).sort((a, b) => b.templateUsedCount - a.templateUsedCount).slice(0, 4), [notes]);
+
+  const categoryCounts = useMemo(() => {
+    const map = {};
+    notes.filter(n => !n.archived).forEach(n => { map[n.category] = (map[n.category] || 0) + 1; });
+    return map;
+  }, [notes]);
+
+  const touch = (id, patch) => setNotes(prev => prev.map(n => n.id === id ? { ...n, ...patch, updatedAt: new Date().toISOString() } : n));
+  const toggleFavorite = id => setNotes(prev => prev.map(n => n.id === id ? { ...n, favorite: !n.favorite } : n));
+  const togglePin = id => setNotes(prev => prev.map(n => n.id === id ? { ...n, pinned: !n.pinned } : n));
+  const archiveNote = id => { setNotes(prev => prev.map(n => n.id === id ? { ...n, archived: true } : n)); setOpenNoteId(null); notify('Note archived'); };
+
+  const openCreate = (category) => { setEditingNote(null); setFormCategory(category || activeCategory); setFormOpen(true); };
+  const openEditForm = (note) => { setEditingNote(note); setFormOpen(true); };
+
+  const submitForm = data => {
+    if (editingNote) {
+      setNotes(prev => prev.map(n => n.id === editingNote.id ? { ...n, ...data, updatedAt: new Date().toISOString() } : n));
+      notify('Saved just now');
+    } else {
+      const created = makeNote({ ...data, author: user.name });
+      setNotes(prev => [created, ...prev]);
+      setOpenNoteId(created.id);
+      notify('Note created');
+    }
+    setFormOpen(false); setEditingNote(null);
+  };
+
+  const duplicateNote = note => {
+    const copy = makeNote({
+      ...note, id: undefined, title: `${note.title} (Copy)`, isTemplate: false, pinned: false,
+      favorite: false, templateUsedCount: 0, sourceTemplateId: note.id, author: user.name,
+      checklist: note.checklist.map(i => ({ ...i, id: uid(), done: false })),
+    });
+    setNotes(prev => [copy, ...prev]);
+    setOpenNoteId(copy.id);
+    notify('Note duplicated');
+  };
+
+  const useAsTemplate = note => {
+    const copy = makeNote({
+      ...note, id: undefined, title: note.title.replace(/ Template$/i, '').trim(), isTemplate: false,
+      pinned: false, favorite: false, templateUsedCount: 0, sourceTemplateId: note.id, author: user.name,
+      checklist: note.checklist.map(i => ({ ...i, id: uid(), done: false })),
+    });
+    setNotes(prev => [copy, ...prev.map(n => n.id === note.id ? { ...n, templateUsedCount: n.templateUsedCount + 1, lastUsedAt: new Date().toISOString() } : n)]);
+    setOpenNoteId(copy.id);
+    notify('Created a fresh copy from template');
+  };
+
+  const requestDelete = note => setDeleteTarget(note);
+  const confirmDelete = () => {
+    setNotes(prev => prev.filter(n => n.id !== deleteTarget.id));
+    if (openNoteId === deleteTarget.id) setOpenNoteId(null);
+    setDeleteTarget(null);
+    notify('Note deleted');
+  };
+
+  const setChecklist = (noteId, items) => touch(noteId, { checklist: items });
+  const convertItem = (note, item) => {
+    onCreateTasksFromChecklist([item], note);
+    setNotes(prev => prev.map(n => n.id === note.id ? { ...n, checklist: n.checklist.map(i => i.id === item.id ? { ...i, done: true } : i) } : n));
+    notify('Task created from checklist item');
+  };
+  const convertAll = (note, items) => {
+    onCreateTasksFromChecklist(items, note);
+    notify(`${items.length} task${items.length > 1 ? 's' : ''} created from checklist`);
+  };
+
+  if (activeNote) {
+    return (
+      <div className="relative">
+        <NoteDetails note={activeNote} allNotes={notes} onBack={(target) => target && target.id ? setOpenNoteId(target.id) : setOpenNoteId(null)}
+          onEdit={openEditForm} onToggleFavorite={toggleFavorite} onTogglePin={togglePin} onDuplicate={duplicateNote}
+          onUseAsTemplate={useAsTemplate} onDelete={requestDelete} onArchive={archiveNote}
+          onToggleChecklistItem={setChecklist} onConvertItem={convertItem} onConvertAll={convertAll} />
+        <NoteFormModal open={formOpen} onClose={() => { setFormOpen(false); setEditingNote(null); }} onSubmit={submitForm}
+          initial={editingNote} defaultCategory={formCategory} user={user} allNotes={notes} />
+        <ConfirmDialog open={!!deleteTarget} title="Delete this note?" message={deleteTarget ? `"${deleteTarget.title}" will be permanently removed.` : ''}
+          confirmLabel="Delete" danger onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete} />
+        {toast && <div className="fixed bottom-6 right-6 z-[60] bg-navy text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-pop animate-fade">{toast}</div>}
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-fade">
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 className="font-display font-bold text-2xl text-ink flex items-center gap-2"><Icon name="notebook" size={22} className="text-purple" />Knowledge Hub</h1>
+          <p className="text-sm text-slateText mt-1">Capture, organize and reuse everything your team needs to know.</p>
+        </div>
+        <button onClick={() => openCreate()} className="inline-flex items-center gap-2 bg-purple hover:bg-purple/90 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-card transition-colors shrink-0">
+          <Icon name="plus" size={16} />Create New Note
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <NoteStatCard icon="notebook" tone="purple" label="Notes" value={stats.total} />
+        <NoteStatCard icon="copy" tone="navy" label="Templates" value={stats.templates} />
+        <NoteStatCard icon="pin" tone="soft" label="Pinned" value={stats.pinned} />
+        <NoteStatCard icon="trend" tone="emerald" label="Updated This Week" value={stats.updatedThisWeek} />
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3 mb-5">
+        <div className="flex-1 flex items-center gap-2 bg-white border border-line rounded-xl px-3.5 py-2.5 shadow-card">
+          <Icon name="search" size={16} className="text-slateText shrink-0" />
+          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search notes, SOPs, checklists..."
+            className="bg-transparent outline-none text-sm w-full placeholder:text-slate-400" />
+          {query && <button onClick={() => setQuery('')} className="text-slate-400 hover:text-slateText shrink-0"><Icon name="x" size={14} /></button>}
+        </div>
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
+          {NOTE_FILTERS.map(f => (
+            <button key={f.key} onClick={() => setFilter(f.key)}
+              className={`shrink-0 text-xs font-semibold px-3.5 py-2.5 rounded-xl border transition-colors
+                ${filter === f.key ? 'bg-navy text-white border-navy' : 'bg-white text-slateText border-line hover:border-navy/30'}`}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {!query && filter === 'all' && !activeCategory && (recentlyUpdated.length > 0 || pinnedNotes.length > 0 || topTemplates.length > 0) && (
+        <div className="grid md:grid-cols-3 gap-4 mb-6">
+          {recentlyUpdated.length > 0 && (
+            <div className="rounded-2xl border border-line bg-white p-4 shadow-card">
+              <p className="text-xs font-bold text-slateText uppercase tracking-wide mb-2.5 flex items-center gap-1.5"><Icon name="history" size={13} />Recently Updated</p>
+              <div className="space-y-1.5">
+                {recentlyUpdated.map(n => (
+                  <button key={n.id} onClick={() => openNote(n)} className="w-full text-left text-sm text-ink hover:text-purple truncate block">{n.title}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          {pinnedNotes.length > 0 && (
+            <div className="rounded-2xl border border-line bg-white p-4 shadow-card">
+              <p className="text-xs font-bold text-slateText uppercase tracking-wide mb-2.5 flex items-center gap-1.5"><Icon name="pin" size={13} />Pinned Notes</p>
+              <div className="space-y-1.5">
+                {pinnedNotes.map(n => (
+                  <button key={n.id} onClick={() => openNote(n)} className="w-full text-left text-sm text-ink hover:text-purple truncate block">{n.title}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          {topTemplates.length > 0 && (
+            <div className="rounded-2xl border border-line bg-white p-4 shadow-card">
+              <p className="text-xs font-bold text-slateText uppercase tracking-wide mb-2.5 flex items-center gap-1.5"><Icon name="copy" size={13} />Most Used Templates</p>
+              <div className="space-y-1.5">
+                {topTemplates.map(n => (
+                  <button key={n.id} onClick={() => openNote(n)} className="w-full text-left text-sm text-ink hover:text-purple truncate flex items-center justify-between gap-2">
+                    <span className="truncate">{n.title}</span><span className="text-[11px] text-slateText shrink-0">{n.templateUsedCount}x</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!query && filter === 'all' && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2.5">
+            <p className="text-xs font-bold text-slateText uppercase tracking-wide">Categories</p>
+            {activeCategory && <button onClick={() => setActiveCategory(null)} className="text-xs font-semibold text-purple hover:underline">Clear filter</button>}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {NOTE_CATEGORIES.map(cat => (
+              <CategoryCard key={cat.key} cat={cat} count={categoryCounts[cat.key] || 0} active={activeCategory === cat.key}
+                onClick={() => setActiveCategory(activeCategory === cat.key ? null : cat.key)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {visible.length === 0 ? (
+        notes.length === 0 ? <NotesEmptyState onCreate={() => openCreate()} /> : (
+          <EmptyState icon="search" title="No notes match" subtitle="Try a different search term or clear your filters." />
+        )
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {visible.map(n => (
+            <NoteCard key={n.id} note={n} onOpen={() => openNote(n)} onToggleFavorite={toggleFavorite} onTogglePin={togglePin} />
+          ))}
+        </div>
+      )}
+
+      <NoteFormModal open={formOpen} onClose={() => { setFormOpen(false); setEditingNote(null); }} onSubmit={submitForm}
+        initial={editingNote} defaultCategory={formCategory} user={user} allNotes={notes} />
+      <ConfirmDialog open={!!deleteTarget} title="Delete this note?" message={deleteTarget ? `"${deleteTarget.title}" will be permanently removed.` : ''}
+        confirmLabel="Delete" danger onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete} />
+      {toast && <div className="fixed bottom-6 right-6 z-[60] bg-navy text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-pop animate-fade">{toast}</div>}
     </div>
   );
 }
