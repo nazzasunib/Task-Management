@@ -2026,9 +2026,6 @@ const NOTE_TYPES = [
 ];
 const noteTypeMeta = key => NOTE_TYPES.find(t => t.key === key) || NOTE_TYPES[0];
 
-function makeChecklistItems(lines) {
-  return lines.map(text => ({ id: uid(), text, done: false }));
-}
 function makeNote(overrides) {
   const now = new Date().toISOString();
   return {
@@ -2057,115 +2054,12 @@ function makeNote(overrides) {
   };
 }
 
-function seedNotes(author) {
-  const daysAgo = n => new Date(Date.now() - n * 86400000).toISOString();
-  const onboardingChecklist = makeChecklistItems([
-    'Introduce company overview', 'Explain company culture', 'Explain organizational structure',
-    'Introduce team members', 'Explain working hours', 'Explain communication channels',
-    'Explain task management system', 'Explain leave policy', 'Explain reporting structure',
-    'Provide necessary access', 'Explain daily workflow', 'Explain performance expectations',
-    'Complete onboarding feedback',
-  ]);
-  onboardingChecklist[0].done = true; onboardingChecklist[1].done = true; onboardingChecklist[2].done = true;
-  onboardingChecklist[3].done = true; onboardingChecklist[4].done = true; onboardingChecklist[5].done = true;
-  onboardingChecklist[6].done = true; onboardingChecklist[7].done = true;
-
-  const eventChecklist = makeChecklistItems([
-    'Confirm venue', 'Prepare banners', 'Prepare brochures', 'Prepare company profile',
-    'Prepare registration form', 'Assign team members', 'Prepare transportation',
-    'Prepare promotional materials', 'Confirm schedule', 'Prepare attendance sheet',
-    'Take photos', 'Collect leads', 'Submit event report',
-  ]);
-  eventChecklist[0].done = true; eventChecklist[1].done = true; eventChecklist[5].done = true;
-
-  const notes = [
-    makeNote({
-      title: 'New Employee Onboarding Checklist', category: 'Onboarding', noteType: 'onboarding',
-      tags: ['HR', 'Onboarding', 'Template'], author, isTemplate: true, pinned: true, favorite: true,
-      description: 'Complete everything needed when a new employee joins.',
-      content: 'Follow this checklist during a new hire’s first week. Assign an owner for each step and confirm access is provisioned before day one.',
-      checklist: onboardingChecklist, templateUsedCount: 6, createdAt: daysAgo(120), updatedAt: daysAgo(2), lastUsedAt: daysAgo(9),
-    }),
-    makeNote({
-      title: 'Event Planning Master Checklist', category: 'Events', noteType: 'event',
-      tags: ['Events', 'Template', 'Planning'], author, isTemplate: true, pinned: true,
-      description: 'Reusable master checklist for running any company event end-to-end.',
-      content: 'Overview: use this as the starting point for any external or internal event. Duplicate it, then update the event-specific sections below.',
-      checklist: eventChecklist, templateUsedCount: 4, createdAt: daysAgo(200), updatedAt: daysAgo(5), lastUsedAt: daysAgo(20),
-    }),
-    makeNote({
-      title: 'University Career Fair', category: 'Events', noteType: 'event',
-      tags: ['Events', 'Recruiting'], author, favorite: true,
-      description: 'Preparation plan for the annual university career fair booth.',
-      content: 'Overview: represent the company at Green University’s career fair. Objective: generate 50+ qualified leads and 10 internship applicants.',
-      checklist: makeChecklistItems(['Confirm venue', 'Prepare banners', 'Prepare brochures', 'Assign team members', 'Prepare transportation', 'Collect leads']),
-      createdAt: daysAgo(14), updatedAt: daysAgo(1),
-    }),
-    makeNote({
-      title: 'Monthly Marketing Meeting Template', category: 'Sales & Marketing', noteType: 'meeting',
-      tags: ['Marketing', 'Meeting', 'Template'], author, isTemplate: true,
-      description: 'Standard agenda for the recurring monthly marketing sync.',
-      content: 'Agenda: 1) Review last month’s campaign performance. 2) Content calendar walkthrough. 3) Budget check-in. 4) Open discussion.',
-      templateUsedCount: 11, createdAt: daysAgo(300), updatedAt: daysAgo(30), lastUsedAt: daysAgo(3),
-    }),
-    makeNote({
-      title: 'New Client Onboarding Process', category: 'SOP / Processes', noteType: 'sop',
-      tags: ['Sales', 'SOP', 'Clients'], author,
-      description: 'Standard process for onboarding a new client from signed contract to kickoff.',
-      content: 'Purpose: ensure every new client has a consistent, professional onboarding experience.\n\nSteps:\n1. Send welcome email within 24 hours of signing.\n2. Schedule kickoff call.\n3. Set up client workspace and access.\n4. Assign account manager.\n5. Share onboarding timeline.\n\nCommon Mistakes: forgetting to confirm billing details before kickoff.',
-      createdAt: daysAgo(60), updatedAt: daysAgo(6),
-    }),
-    makeNote({
-      title: 'Social Media Campaign Checklist', category: 'Checklists', noteType: 'checklist',
-      tags: ['Marketing', 'Social', 'Checklist'], author,
-      description: 'Steps to launch a new social media campaign.',
-      checklist: makeChecklistItems(['Define campaign goal', 'Draft creative brief', 'Design assets', 'Schedule posts', 'Brief community team', 'Review analytics after 1 week']),
-      createdAt: daysAgo(25), updatedAt: daysAgo(4),
-    }),
-    makeNote({
-      title: 'Office Event Preparation', category: 'Events', noteType: 'checklist',
-      tags: ['Events', 'Office'], author,
-      description: 'Quick checklist for internal office events and celebrations.',
-      checklist: makeChecklistItems(['Book space', 'Order catering', 'Send calendar invite', 'Prepare music/playlist', 'Assign cleanup crew']),
-      createdAt: daysAgo(40), updatedAt: daysAgo(10),
-    }),
-    makeNote({
-      title: 'Sales Follow-up Process', category: 'SOP / Processes', noteType: 'sop',
-      tags: ['Sales', 'SOP'], author,
-      description: 'When and how to follow up with warm leads.',
-      content: 'Purpose: keep leads warm without being pushy.\n\nSteps:\n1. Follow up within 24 hours of first contact.\n2. Send a value-add resource on day 3.\n3. Call on day 7 if no response.\n4. Mark as cold after 3 unanswered attempts.',
-      createdAt: daysAgo(80), updatedAt: daysAgo(15),
-    }),
-    makeNote({
-      title: 'Company Introduction Guide', category: 'General', noteType: 'reference',
-      tags: ['Company', 'Reference'], author,
-      description: 'A short overview of who we are, useful when briefing partners or new hires.',
-      content: 'Founded to help teams manage tasks and knowledge in one place. Core values: clarity, ownership, and continuous improvement.',
-      createdAt: daysAgo(400), updatedAt: daysAgo(60),
-    }),
-    makeNote({
-      title: 'Employee Exit Checklist', category: 'Onboarding', noteType: 'checklist',
-      tags: ['HR', 'Offboarding', 'Checklist'], author,
-      description: 'Ensure a smooth, secure offboarding when someone leaves the company.',
-      checklist: makeChecklistItems(['Revoke system access', 'Collect company equipment', 'Conduct exit interview', 'Update org chart', 'Notify payroll']),
-      createdAt: daysAgo(90), updatedAt: daysAgo(45),
-    }),
-  ];
-  // link a few notes together to demonstrate the relationship system
-  const byTitle = t => notes.find(n => n.title === t);
-  byTitle('University Career Fair').relatedNoteIds = [byTitle('Event Planning Master Checklist').id, byTitle('Social Media Campaign Checklist').id];
-  byTitle('Event Planning Master Checklist').relatedNoteIds = [byTitle('University Career Fair').id];
-  return notes;
-}
-
-function loadNotes(userId, author) {
+function loadNotes(userId) {
   try {
     const raw = localStorage.getItem(notesKey(userId));
     if (raw) return JSON.parse(raw);
-    const seeded = seedNotes(author);
-    localStorage.setItem(notesKey(userId), JSON.stringify(seeded));
-    return seeded;
-  } catch (e) { return seedNotes(author); }
+    return [];
+  } catch (e) { return []; }
 }
 function persistNotes(notes, userId) {
   try { localStorage.setItem(notesKey(userId), JSON.stringify(notes)); } catch (e) {}
@@ -2687,7 +2581,7 @@ const NOTE_FILTERS = [
 ];
 
 function NotesPage({ user, onCreateTasksFromChecklist }) {
-  const [notes, setNotes] = useState(() => loadNotes(user.id, user.name));
+  const [notes, setNotes] = useState(() => loadNotes(user.id));
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [activeCategory, setActiveCategory] = useState(null);
