@@ -2201,19 +2201,6 @@ function NoteTypeBadge({ noteType }) {
   );
 }
 
-/* ---- Small stat card for the top of the Notes dashboard ---- */
-function NoteStatCard({ icon, tone, label, value }) {
-  return (
-    <div className="rounded-2xl border border-line bg-white p-4 flex items-center gap-3 shadow-card hover:shadow-pop transition-shadow">
-      <IconBadge icon={icon} tone={tone} size={40} iconSize={18} />
-      <div className="min-w-0">
-        <p className="font-display font-bold text-lg text-ink leading-none">{value}</p>
-        <p className="text-xs text-slateText mt-1 truncate">{label}</p>
-      </div>
-    </div>
-  );
-}
-
 /* ---- Category card grid ---- */
 function CategoryCard({ cat, count, active, onClick }) {
   return (
@@ -2741,21 +2728,6 @@ function NotesPage({ user, onCreateTasksFromChecklist }) {
     return list;
   }, [notes, filter, activeCategory, query]);
 
-  const stats = useMemo(() => {
-    const active = notes.filter(n => !n.archived);
-    const weekAgo = Date.now() - 7 * 86400000;
-    return {
-      total: active.length,
-      templates: active.filter(n => n.isTemplate).length,
-      pinned: active.filter(n => n.pinned).length,
-      updatedThisWeek: active.filter(n => new Date(n.updatedAt).getTime() >= weekAgo).length,
-    };
-  }, [notes]);
-
-  const recentlyUpdated = useMemo(() => [...notes].filter(n => !n.archived).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 4), [notes]);
-  const pinnedNotes = useMemo(() => notes.filter(n => n.pinned && !n.archived), [notes]);
-  const topTemplates = useMemo(() => [...notes].filter(n => n.isTemplate).sort((a, b) => b.templateUsedCount - a.templateUsedCount).slice(0, 4), [notes]);
-
   const categoryCounts = useMemo(() => {
     const map = {};
     notes.filter(n => !n.archived).forEach(n => { map[n.category] = (map[n.category] || 0) + 1; });
@@ -2852,13 +2824,6 @@ function NotesPage({ user, onCreateTasksFromChecklist }) {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <NoteStatCard icon="notebook" tone="purple" label="Notes" value={stats.total} />
-        <NoteStatCard icon="copy" tone="navy" label="Templates" value={stats.templates} />
-        <NoteStatCard icon="pin" tone="soft" label="Pinned" value={stats.pinned} />
-        <NoteStatCard icon="trend" tone="emerald" label="Updated This Week" value={stats.updatedThisWeek} />
-      </div>
-
       <div className="flex flex-col sm:flex-row gap-3 mb-5">
         <div className="flex-1 flex items-center gap-2 bg-white border border-line rounded-xl px-3.5 py-2.5 shadow-card">
           <Icon name="search" size={16} className="text-slateText shrink-0" />
@@ -2876,43 +2841,6 @@ function NotesPage({ user, onCreateTasksFromChecklist }) {
           ))}
         </div>
       </div>
-
-      {!query && filter === 'all' && !activeCategory && (recentlyUpdated.length > 0 || pinnedNotes.length > 0 || topTemplates.length > 0) && (
-        <div className="grid md:grid-cols-3 gap-4 mb-6">
-          {recentlyUpdated.length > 0 && (
-            <div className="rounded-2xl border border-line bg-white p-4 shadow-card">
-              <p className="text-xs font-bold text-slateText uppercase tracking-wide mb-2.5 flex items-center gap-1.5"><Icon name="history" size={13} />Recently Updated</p>
-              <div className="space-y-1.5">
-                {recentlyUpdated.map(n => (
-                  <button key={n.id} onClick={() => openNote(n)} className="w-full text-left text-sm text-ink hover:text-purple truncate block">{n.title}</button>
-                ))}
-              </div>
-            </div>
-          )}
-          {pinnedNotes.length > 0 && (
-            <div className="rounded-2xl border border-line bg-white p-4 shadow-card">
-              <p className="text-xs font-bold text-slateText uppercase tracking-wide mb-2.5 flex items-center gap-1.5"><Icon name="pin" size={13} />Pinned Notes</p>
-              <div className="space-y-1.5">
-                {pinnedNotes.map(n => (
-                  <button key={n.id} onClick={() => openNote(n)} className="w-full text-left text-sm text-ink hover:text-purple truncate block">{n.title}</button>
-                ))}
-              </div>
-            </div>
-          )}
-          {topTemplates.length > 0 && (
-            <div className="rounded-2xl border border-line bg-white p-4 shadow-card">
-              <p className="text-xs font-bold text-slateText uppercase tracking-wide mb-2.5 flex items-center gap-1.5"><Icon name="copy" size={13} />Most Used Templates</p>
-              <div className="space-y-1.5">
-                {topTemplates.map(n => (
-                  <button key={n.id} onClick={() => openNote(n)} className="w-full text-left text-sm text-ink hover:text-purple truncate flex items-center justify-between gap-2">
-                    <span className="truncate">{n.title}</span><span className="text-[11px] text-slateText shrink-0">{n.templateUsedCount}x</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {!query && filter === 'all' && (
         <div className="mb-6">
