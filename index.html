@@ -1963,8 +1963,11 @@ function Workspace({ user, onLogout, onUpdateUser }) {
   );
 }
 
-/* ======================= NOTES (reusable checklists) ======================= */
-const notesKey = userId => `momentum.notes.${userId}.v1`;
+/* ======================= NOTES (reusable checklists) =======================
+   Storage key is versioned as v2: an earlier, unrelated "Notes" feature (flat
+   notes with tags/templates) used the v1 key, and its data shape is
+   incompatible with the Category -> Task -> ChecklistItem structure here. */
+const notesKey = userId => `momentum.notes.${userId}.v2`;
 
 function makeChecklistItem(text) {
   return { id: uid(), text, completed: false };
@@ -1976,10 +1979,20 @@ function makeNoteTask(categoryId, title, items = []) {
 function makeNoteCategory(name) {
   return { id: uid(), name, createdAt: new Date().toISOString(), tasks: [] };
 }
+function sanitizeNoteCategories(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(c => c && typeof c === 'object' && typeof c.id === 'string' && typeof c.name === 'string').map(c => ({
+    ...c,
+    tasks: Array.isArray(c.tasks) ? c.tasks.filter(t => t && typeof t === 'object' && typeof t.id === 'string').map(t => ({
+      ...t,
+      items: Array.isArray(t.items) ? t.items.filter(i => i && typeof i === 'object' && typeof i.id === 'string') : [],
+    })) : [],
+  }));
+}
 function loadNoteCategories(userId) {
   try {
     const raw = localStorage.getItem(notesKey(userId));
-    if (raw) return JSON.parse(raw);
+    if (raw) return sanitizeNoteCategories(JSON.parse(raw));
     return [];
   } catch (e) { return []; }
 }
@@ -2207,6 +2220,30 @@ function NotesPage({ user }) {
   );
 }
 
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) { console.error('Unhandled UI error:', error, info); }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg p-6">
+        <div className="max-w-sm w-full text-center bg-white rounded-2xl border border-line shadow-card p-8">
+          <div className="w-12 h-12 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
+            <Icon name="x" size={20} />
+          </div>
+          <h1 className="font-display font-bold text-lg text-ink mb-1.5">Something went wrong</h1>
+          <p className="text-sm text-slateText mb-5">This section hit an unexpected error. Reloading usually fixes it.</p>
+          <button onClick={() => window.location.reload()}
+            className="w-full bg-purple hover:bg-purple/90 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+            Reload App
+          </button>
+        </div>
+      </div>
+    );
+  }
+}
+
 function App() {
   const [currentUser, setCurrentUser] = useState(() => {
     const sid = loadSession();
@@ -2225,8 +2262,8 @@ function App() {
     });
   };
 
-  if (!currentUser) return <AuthPage onAuth={handleAuth} />;
-  return <Workspace key={currentUser.id} user={currentUser} onLogout={handleLogout} onUpdateUser={handleUpdateUser} />;
+  if (!currentUser) return <ErrorBoundary><AuthPage onAuth={handleAuth} /></ErrorBoundary>;
+  return <ErrorBoundary><Workspace key={currentUser.id} user={currentUser} onLogout={handleLogout} onUpdateUser={handleUpdateUser} /></ErrorBoundary>;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
