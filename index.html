@@ -2106,14 +2106,11 @@ function NoteTaskCard({ task, onRename, onDelete, onDuplicate, onAddItem, onTogg
   );
 }
 
-function NoteCategorySection({ category, onRename, onDelete, onAddTask, onUpdateTask, onDeleteTask, onDuplicateTask }) {
+function NoteCategoryCard({ category, onOpen, onRename, onDelete }) {
   const [nameEditing, setNameEditing] = useState(false);
   const [nameDraft, setNameDraft] = useState(category.name);
-  const [newTask, setNewTask] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
-  // addStage: 'idle' -> single "+ Add" button | 'choose' -> pick Task or Checklist | 'task' -> title input
-  const [addStage, setAddStage] = useState('idle');
-  const [autoFocusTaskId, setAutoFocusTaskId] = useState(null);
+  const taskCount = category.tasks.length;
 
   const commitName = () => {
     const v = nameDraft.trim();
@@ -2121,6 +2118,40 @@ function NoteCategorySection({ category, onRename, onDelete, onAddTask, onUpdate
     else setNameDraft(category.name);
     setNameEditing(false);
   };
+
+  return (
+    <div onClick={() => !nameEditing && onOpen()}
+      className="rounded-2xl border border-line bg-white shadow-card p-5 flex items-center gap-3 cursor-pointer transition-all duration-200 hover:shadow-pop hover:-translate-y-0.5 animate-pop">
+      <IconBadge icon="folder" tone="soft" size={40} iconSize={18} />
+      <div className="min-w-0 flex-1">
+        {nameEditing ? (
+          <input autoFocus value={nameDraft} onClick={e => e.stopPropagation()}
+            onChange={e => setNameDraft(e.target.value)}
+            onBlur={commitName} onKeyDown={e => { if (e.key === 'Enter') commitName(); if (e.key === 'Escape') { setNameDraft(category.name); setNameEditing(false); } }}
+            className="font-display font-bold text-base px-2 py-1 rounded-lg border border-purple outline-none w-full animate-pop" />
+        ) : (
+          <h2 className="font-display font-bold text-base text-ink truncate">{category.name}</h2>
+        )}
+        <p className="text-xs text-slateText mt-0.5">{taskCount} {taskCount === 1 ? 'item' : 'items'}</p>
+      </div>
+      <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
+        <IconButton icon="edit" label="Rename" onClick={() => setNameEditing(true)} />
+        <IconButton icon="trash" label="Delete category" onClick={() => setConfirmDelete(true)} />
+        <Icon name="chevronRight" size={16} className="text-slate-300 ml-1" />
+      </div>
+
+      <ConfirmDialog open={confirmDelete} title="Delete this category?" message={`"${category.name}" and all its tasks will be permanently removed.`}
+        confirmLabel="Delete" danger onCancel={() => setConfirmDelete(false)} onConfirm={() => { onDelete(); setConfirmDelete(false); }} />
+    </div>
+  );
+}
+
+function NoteCategoryPage({ category, onBack, onUpdateTask, onDeleteTask, onDuplicateTask, onAddTask }) {
+  // addStage: 'idle' -> Task/Checklist buttons | 'task' -> title input
+  const [addStage, setAddStage] = useState('idle');
+  const [newTask, setNewTask] = useState('');
+  const [autoFocusTaskId, setAutoFocusTaskId] = useState(null);
+
   const addTask = () => {
     const v = newTask.trim();
     if (!v) return;
@@ -2135,26 +2166,46 @@ function NoteCategorySection({ category, onRename, onDelete, onAddTask, onUpdate
   };
 
   return (
-    <div className="mb-6 rounded-2xl border border-line bg-white shadow-card p-5 sm:p-6 animate-fade">
-      <div className="flex items-center justify-between gap-2 mb-5 pb-4 border-b border-line">
-        <div className="flex items-center gap-2 min-w-0">
-          <IconBadge icon="folder" tone="soft" size={32} iconSize={15} />
-          {nameEditing ? (
-            <input autoFocus value={nameDraft} onChange={e => setNameDraft(e.target.value)}
-              onBlur={commitName} onKeyDown={e => { if (e.key === 'Enter') commitName(); if (e.key === 'Escape') { setNameDraft(category.name); setNameEditing(false); } }}
-              className="font-display font-bold text-lg px-2 py-1 rounded-lg border border-purple outline-none animate-pop" />
-          ) : (
-            <h2 onClick={() => setNameEditing(true)} className="font-display font-bold text-lg text-ink cursor-text truncate">{category.name}</h2>
-          )}
+    <div className="animate-fade max-w-5xl mx-auto">
+      <button onClick={onBack}
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-slateText hover:text-purple mb-4 transition-colors">
+        <Icon name="chevronLeft" size={16} />Back to Notes
+      </button>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3 min-w-0">
+          <IconBadge icon="folder" tone="soft" size={40} iconSize={18} />
+          <h1 className="font-display font-bold text-2xl text-ink truncate">{category.name}</h1>
         </div>
-        <div className="flex items-center gap-0.5 shrink-0">
-          <IconButton icon="edit" label="Rename" onClick={() => setNameEditing(true)} />
-          <IconButton icon="trash" label="Delete category" onClick={() => setConfirmDelete(true)} />
-        </div>
+
+        {addStage === 'idle' && (
+          <div className="flex gap-2 shrink-0">
+            <button onClick={() => setAddStage('task')}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-line text-sm font-semibold text-ink transition-all hover:border-purpleLight hover:bg-purple/5 active:scale-95">
+              <Icon name="fileText" size={14} className="text-purple" />Task
+            </button>
+            <button onClick={addChecklistDirect}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-line text-sm font-semibold text-ink transition-all hover:border-purpleLight hover:bg-purple/5 active:scale-95">
+              <Icon name="checkSquare" size={14} className="text-purple" />Checklist
+            </button>
+          </div>
+        )}
+        {addStage === 'task' && (
+          <div className="flex gap-2 w-full sm:w-auto animate-pop">
+            <input autoFocus value={newTask} onChange={e => setNewTask(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') addTask(); if (e.key === 'Escape') { setNewTask(''); setAddStage('idle'); } }}
+              placeholder="Task name..." className={inputCls + ' text-sm'} />
+            <button onClick={addTask} className="px-4 rounded-xl bg-purple hover:bg-purple/90 text-white text-sm font-semibold shrink-0 transition-all active:scale-95">Add</button>
+            <button onClick={() => { setNewTask(''); setAddStage('idle'); }} aria-label="Cancel"
+              className="px-3 rounded-xl border border-line text-slateText hover:bg-slate-100 shrink-0 transition-colors"><Icon name="x" size={14} /></button>
+          </div>
+        )}
       </div>
 
-      {category.tasks.length > 0 && (
-        <div className="grid sm:grid-cols-2 gap-4 mb-4">
+      {category.tasks.length === 0 ? (
+        <EmptyState icon="checkSquare" title="Nothing here yet" subtitle="Add a Task or a Checklist to start building this category's reusable steps." />
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-4">
           {category.tasks.map(task => (
             <NoteTaskCard key={task.id} task={task}
               autoFocusItems={task.id === autoFocusTaskId}
@@ -2168,48 +2219,6 @@ function NoteCategorySection({ category, onRename, onDelete, onAddTask, onUpdate
           ))}
         </div>
       )}
-
-      {addStage === 'idle' && (
-        <button onClick={() => setAddStage('choose')}
-          className="flex w-full items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-line py-2.5 text-sm font-medium text-slateText transition-colors hover:border-purpleLight hover:text-purple hover:bg-purple/5">
-          <Icon name="plus" size={14} />Add
-        </button>
-      )}
-
-      {addStage === 'choose' && (
-        <div className="flex flex-wrap gap-2 animate-pop">
-          <button onClick={() => setAddStage('task')}
-            className="flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-xl border border-line py-2.5 text-sm font-medium text-ink transition-all hover:border-purpleLight hover:bg-purple/5 active:scale-95">
-            <Icon name="fileText" size={14} className="text-purple" />Task
-          </button>
-          <button onClick={addChecklistDirect}
-            className="flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-xl border border-line py-2.5 text-sm font-medium text-ink transition-all hover:border-purpleLight hover:bg-purple/5 active:scale-95">
-            <Icon name="checkSquare" size={14} className="text-purple" />Checklist
-          </button>
-          <button onClick={() => setAddStage('idle')} aria-label="Cancel"
-            className="px-3 rounded-xl border border-line text-slateText hover:bg-slate-100 transition-colors shrink-0">
-            <Icon name="x" size={14} />
-          </button>
-        </div>
-      )}
-
-      {addStage === 'task' && (
-        <div className="flex gap-2 animate-pop">
-          <input autoFocus value={newTask} onChange={e => setNewTask(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') addTask(); if (e.key === 'Escape') { setNewTask(''); setAddStage('idle'); } }}
-            placeholder="Task name..." className={inputCls + ' text-sm'} />
-          <button onClick={addTask} className="inline-flex items-center gap-1.5 px-4 rounded-xl bg-purple hover:bg-purple/90 text-white text-sm font-semibold shrink-0 transition-all active:scale-95">
-            <Icon name="plus" size={14} />Add Task
-          </button>
-          <button onClick={() => { setNewTask(''); setAddStage('idle'); }} aria-label="Cancel"
-            className="px-3 rounded-xl border border-line text-slateText hover:bg-slate-100 transition-colors shrink-0">
-            <Icon name="x" size={14} />
-          </button>
-        </div>
-      )}
-
-      <ConfirmDialog open={confirmDelete} title="Delete this category?" message={`"${category.name}" and all its tasks will be permanently removed.`}
-        confirmLabel="Delete" danger onCancel={() => setConfirmDelete(false)} onConfirm={() => { onDelete(); setConfirmDelete(false); }} />
     </div>
   );
 }
@@ -2218,6 +2227,7 @@ function NotesPage({ user }) {
   const [categories, setCategories] = useState(() => loadNoteCategories(user.id));
   const [newCategory, setNewCategory] = useState('');
   const [addingCategory, setAddingCategory] = useState(false);
+  const [openCategoryId, setOpenCategoryId] = useState(null);
 
   useEffect(() => { persistNoteCategories(categories, user.id); }, [categories, user.id]);
 
@@ -2229,7 +2239,7 @@ function NotesPage({ user }) {
     setAddingCategory(false);
   };
   const renameCategory = (id, name) => setCategories(prev => prev.map(c => c.id === id ? { ...c, name } : c));
-  const deleteCategory = id => setCategories(prev => prev.filter(c => c.id !== id));
+  const deleteCategory = id => { setCategories(prev => prev.filter(c => c.id !== id)); setOpenCategoryId(prev => prev === id ? null : prev); };
 
   const addTask = (categoryId, title) => {
     const task = makeNoteTask(categoryId, title);
@@ -2244,6 +2254,18 @@ function NotesPage({ user }) {
     const copy = makeNoteTask(categoryId, `${baseTitle} (Copy)`, task.items.map(i => ({ ...i, id: uid(), completed: false })));
     setCategories(prev => prev.map(c => c.id === categoryId ? { ...c, tasks: [...c.tasks, copy] } : c));
   };
+
+  const openCategory = categories.find(c => c.id === openCategoryId) || null;
+
+  if (openCategory) {
+    return (
+      <NoteCategoryPage category={openCategory} onBack={() => setOpenCategoryId(null)}
+        onAddTask={title => addTask(openCategory.id, title)}
+        onUpdateTask={(taskId, updater) => updateTask(openCategory.id, taskId, updater)}
+        onDeleteTask={taskId => deleteTask(openCategory.id, taskId)}
+        onDuplicateTask={task => duplicateTask(openCategory.id, task)} />
+    );
+  }
 
   return (
     <div className="animate-fade max-w-5xl mx-auto">
@@ -2269,17 +2291,16 @@ function NotesPage({ user }) {
       </div>
 
       {categories.length === 0 ? (
-        <EmptyState icon="folder" title="No categories yet" subtitle="Create a category, then add reusable checklists under it — like 'Seminar Preparation'." />
+        <EmptyState icon="folder" title="No categories yet" subtitle="Create a category, then open it to add reusable Tasks or Checklists — like 'Seminar'." />
       ) : (
-        categories.map(cat => (
-          <NoteCategorySection key={cat.id} category={cat}
-            onRename={name => renameCategory(cat.id, name)}
-            onDelete={() => deleteCategory(cat.id)}
-            onAddTask={title => addTask(cat.id, title)}
-            onUpdateTask={(taskId, updater) => updateTask(cat.id, taskId, updater)}
-            onDeleteTask={taskId => deleteTask(cat.id, taskId)}
-            onDuplicateTask={task => duplicateTask(cat.id, task)} />
-        ))
+        <div className="grid sm:grid-cols-2 gap-4">
+          {categories.map(cat => (
+            <NoteCategoryCard key={cat.id} category={cat}
+              onOpen={() => setOpenCategoryId(cat.id)}
+              onRename={name => renameCategory(cat.id, name)}
+              onDelete={() => deleteCategory(cat.id)} />
+          ))}
+        </div>
       )}
     </div>
   );
