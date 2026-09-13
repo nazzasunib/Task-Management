@@ -1974,7 +1974,11 @@ function makeChecklistItem(text) {
 }
 function makeNoteTask(categoryId, title, items = []) {
   const now = new Date().toISOString();
-  return { id: uid(), categoryId, title, createdAt: now, updatedAt: now, items };
+  return { id: uid(), categoryId, title, kind: 'checklist', description: '', createdAt: now, updatedAt: now, items };
+}
+function makeNoteText(categoryId, title, description = '') {
+  const now = new Date().toISOString();
+  return { id: uid(), categoryId, title, kind: 'text', description, createdAt: now, updatedAt: now, items: [] };
 }
 function makeNoteCategory(name) {
   return { id: uid(), name, createdAt: new Date().toISOString(), tasks: [] };
@@ -1985,6 +1989,8 @@ function sanitizeNoteCategories(raw) {
     ...c,
     tasks: Array.isArray(c.tasks) ? c.tasks.filter(t => t && typeof t === 'object' && typeof t.id === 'string').map(t => ({
       ...t,
+      kind: t.kind === 'text' ? 'text' : 'checklist',
+      description: typeof t.description === 'string' ? t.description : '',
       items: Array.isArray(t.items) ? t.items.filter(i => i && typeof i === 'object' && typeof i.id === 'string') : [],
     })) : [],
   }));
@@ -2106,6 +2112,58 @@ function NoteTaskCard({ task, onRename, onDelete, onDuplicate, onAddItem, onTogg
   );
 }
 
+function NoteTextCard({ note, onRename, onEditDescription, onDelete, onDuplicate }) {
+  const [titleEditing, setTitleEditing] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(note.title);
+  const [descEditing, setDescEditing] = useState(false);
+  const [descDraft, setDescDraft] = useState(note.description);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const commitTitle = () => {
+    const v = titleDraft.trim();
+    if (v) onRename(v);
+    else setTitleDraft(note.title);
+    setTitleEditing(false);
+  };
+  const commitDesc = () => {
+    onEditDescription(descDraft.trim());
+    setDescEditing(false);
+  };
+
+  return (
+    <div className="rounded-2xl border border-line bg-white p-5 shadow-card animate-pop transition-all duration-200 hover:shadow-pop hover:-translate-y-0.5">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        {titleEditing ? (
+          <input autoFocus value={titleDraft} onChange={e => setTitleDraft(e.target.value)}
+            onBlur={commitTitle} onKeyDown={e => { if (e.key === 'Enter') commitTitle(); if (e.key === 'Escape') { setTitleDraft(note.title); setTitleEditing(false); } }}
+            placeholder="Text name" className="flex-1 font-display font-semibold text-[15px] px-2 py-1 rounded-lg border border-purple outline-none animate-pop" />
+        ) : (
+          <h3 onClick={() => setTitleEditing(true)} className="font-display font-semibold text-[15px] text-ink cursor-text">{note.title}</h3>
+        )}
+        <div className="flex items-center gap-0.5 shrink-0">
+          <IconButton icon="edit" label="Rename" onClick={() => setTitleEditing(true)} size={14} />
+          <IconButton icon="copy" label="Duplicate" onClick={onDuplicate} size={14} />
+          <IconButton icon="trash" label="Delete" onClick={() => setConfirmDelete(true)} size={14} />
+        </div>
+      </div>
+
+      {descEditing ? (
+        <textarea autoFocus value={descDraft} onChange={e => setDescDraft(e.target.value)}
+          onBlur={commitDesc} onKeyDown={e => { if (e.key === 'Escape') { setDescDraft(note.description); setDescEditing(false); } }}
+          placeholder="Description..." rows={4}
+          className={inputCls + ' text-sm resize-none animate-pop'} />
+      ) : note.description ? (
+        <p onClick={() => setDescEditing(true)} className="text-sm text-ink whitespace-pre-wrap cursor-text leading-relaxed">{note.description}</p>
+      ) : (
+        <p onClick={() => setDescEditing(true)} className="text-sm text-slateText italic cursor-text">Add a description...</p>
+      )}
+
+      <ConfirmDialog open={confirmDelete} title="Delete this?" message={`"${note.title}" will be permanently removed.`}
+        confirmLabel="Delete" danger onCancel={() => setConfirmDelete(false)} onConfirm={() => { onDelete(); setConfirmDelete(false); }} />
+    </div>
+  );
+}
+
 function NoteCategoryCard({ category, onOpen, onRename, onDelete }) {
   const [nameEditing, setNameEditing] = useState(false);
   const [nameDraft, setNameDraft] = useState(category.name);
@@ -2146,10 +2204,12 @@ function NoteCategoryCard({ category, onOpen, onRename, onDelete }) {
   );
 }
 
-function NoteCategoryPage({ category, onBack, onUpdateTask, onDeleteTask, onDuplicateTask, onAddTask }) {
-  // addStage: 'idle' -> Task/Checklist buttons | 'task' -> title input
+function NoteCategoryPage({ category, onBack, onUpdateTask, onDeleteTask, onDuplicateTask, onAddTask, onAddText }) {
+  // addStage: 'idle' -> Task/Checklist/Text buttons | 'task' -> title input | 'text-name' -> name input | 'text-desc' -> description input
   const [addStage, setAddStage] = useState('idle');
   const [newTask, setNewTask] = useState('');
+  const [newTextName, setNewTextName] = useState('');
+  const [newTextDesc, setNewTextDesc] = useState('');
   const [autoFocusTaskId, setAutoFocusTaskId] = useState(null);
 
   const addTask = () => {
@@ -2164,6 +2224,17 @@ function NoteCategoryPage({ category, onBack, onUpdateTask, onDeleteTask, onDupl
     setAutoFocusTaskId(id);
     setAddStage('idle');
   };
+  const goToTextDesc = () => {
+    if (!newTextName.trim()) return;
+    setAddStage('text-desc');
+  };
+  const addText = () => {
+    const v = newTextName.trim();
+    if (!v) return;
+    onAddText(v, newTextDesc.trim());
+    setNewTextName(''); setNewTextDesc(''); setAddStage('idle');
+  };
+  const cancelAdd = () => { setNewTask(''); setNewTextName(''); setNewTextDesc(''); setAddStage('idle'); };
 
   return (
     <div className="animate-fade max-w-5xl mx-auto">
@@ -2188,25 +2259,57 @@ function NoteCategoryPage({ category, onBack, onUpdateTask, onDeleteTask, onDupl
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-line text-sm font-semibold text-ink transition-all hover:border-purpleLight hover:bg-purple/5 active:scale-95">
               <Icon name="checkSquare" size={14} className="text-purple" />Checklist
             </button>
+            <button onClick={() => setAddStage('text-name')}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-line text-sm font-semibold text-ink transition-all hover:border-purpleLight hover:bg-purple/5 active:scale-95">
+              <Icon name="edit" size={14} className="text-purple" />Text Note
+            </button>
           </div>
         )}
         {addStage === 'task' && (
           <div className="flex gap-2 w-full sm:w-auto animate-pop">
             <input autoFocus value={newTask} onChange={e => setNewTask(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') addTask(); if (e.key === 'Escape') { setNewTask(''); setAddStage('idle'); } }}
+              onKeyDown={e => { if (e.key === 'Enter') addTask(); if (e.key === 'Escape') cancelAdd(); }}
               placeholder="Task name..." className={inputCls + ' text-sm'} />
             <button onClick={addTask} className="px-4 rounded-xl bg-purple hover:bg-purple/90 text-white text-sm font-semibold shrink-0 transition-all active:scale-95">Add</button>
-            <button onClick={() => { setNewTask(''); setAddStage('idle'); }} aria-label="Cancel"
+            <button onClick={cancelAdd} aria-label="Cancel"
               className="px-3 rounded-xl border border-line text-slateText hover:bg-slate-100 shrink-0 transition-colors"><Icon name="x" size={14} /></button>
+          </div>
+        )}
+        {addStage === 'text-name' && (
+          <div className="flex gap-2 w-full sm:w-auto animate-pop">
+            <input autoFocus value={newTextName} onChange={e => setNewTextName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') goToTextDesc(); if (e.key === 'Escape') cancelAdd(); }}
+              placeholder="Text name..." className={inputCls + ' text-sm'} />
+            <button onClick={goToTextDesc} className="px-4 rounded-xl bg-purple hover:bg-purple/90 text-white text-sm font-semibold shrink-0 transition-all active:scale-95">Next</button>
+            <button onClick={cancelAdd} aria-label="Cancel"
+              className="px-3 rounded-xl border border-line text-slateText hover:bg-slate-100 shrink-0 transition-colors"><Icon name="x" size={14} /></button>
+          </div>
+        )}
+        {addStage === 'text-desc' && (
+          <div className="flex flex-col gap-2 w-full animate-pop">
+            <p className="text-sm font-semibold text-ink">{newTextName}</p>
+            <textarea autoFocus value={newTextDesc} onChange={e => setNewTextDesc(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Escape') cancelAdd(); }}
+              placeholder="Description..." rows={3} className={inputCls + ' text-sm resize-none'} />
+            <div className="flex gap-2 justify-end">
+              <button onClick={cancelAdd} className="px-3 rounded-xl border border-line text-slateText hover:bg-slate-100 text-sm transition-colors">Cancel</button>
+              <button onClick={addText} className="px-4 rounded-xl bg-purple hover:bg-purple/90 text-white text-sm font-semibold transition-all active:scale-95">Add Text Note</button>
+            </div>
           </div>
         )}
       </div>
 
       {category.tasks.length === 0 ? (
-        <EmptyState icon="checkSquare" title="Nothing here yet" subtitle="Add a Task or a Checklist to start building this category's reusable steps." />
+        <EmptyState icon="checkSquare" title="Nothing here yet" subtitle="Add a Task, Checklist, or Text Note to start building this category's reusable steps." />
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
-          {category.tasks.map(task => (
+          {category.tasks.map(task => task.kind === 'text' ? (
+            <NoteTextCard key={task.id} note={task}
+              onRename={title => onUpdateTask(task.id, t => ({ ...t, title, updatedAt: new Date().toISOString() }))}
+              onEditDescription={description => onUpdateTask(task.id, t => ({ ...t, description, updatedAt: new Date().toISOString() }))}
+              onDelete={() => onDeleteTask(task.id)}
+              onDuplicate={() => onDuplicateTask(task)} />
+          ) : (
             <NoteTaskCard key={task.id} task={task}
               autoFocusItems={task.id === autoFocusTaskId}
               onRename={title => onUpdateTask(task.id, t => ({ ...t, title, updatedAt: new Date().toISOString() }))}
@@ -2246,12 +2349,19 @@ function NotesPage({ user }) {
     setCategories(prev => prev.map(c => c.id === categoryId ? { ...c, tasks: [...c.tasks, task] } : c));
     return task.id;
   };
+  const addText = (categoryId, title, description) => {
+    const note = makeNoteText(categoryId, title, description);
+    setCategories(prev => prev.map(c => c.id === categoryId ? { ...c, tasks: [...c.tasks, note] } : c));
+    return note.id;
+  };
   const updateTask = (categoryId, taskId, updater) => setCategories(prev => prev.map(c => c.id === categoryId
     ? { ...c, tasks: c.tasks.map(t => t.id === taskId ? updater(t) : t) } : c));
   const deleteTask = (categoryId, taskId) => setCategories(prev => prev.map(c => c.id === categoryId ? { ...c, tasks: c.tasks.filter(t => t.id !== taskId) } : c));
   const duplicateTask = (categoryId, task) => {
     const baseTitle = task.title && task.title.trim() ? task.title : 'Checklist';
-    const copy = makeNoteTask(categoryId, `${baseTitle} (Copy)`, task.items.map(i => ({ ...i, id: uid(), completed: false })));
+    const copy = task.kind === 'text'
+      ? makeNoteText(categoryId, `${baseTitle} (Copy)`, task.description)
+      : makeNoteTask(categoryId, `${baseTitle} (Copy)`, task.items.map(i => ({ ...i, id: uid(), completed: false })));
     setCategories(prev => prev.map(c => c.id === categoryId ? { ...c, tasks: [...c.tasks, copy] } : c));
   };
 
@@ -2261,6 +2371,7 @@ function NotesPage({ user }) {
     return (
       <NoteCategoryPage category={openCategory} onBack={() => setOpenCategoryId(null)}
         onAddTask={title => addTask(openCategory.id, title)}
+        onAddText={(title, description) => addText(openCategory.id, title, description)}
         onUpdateTask={(taskId, updater) => updateTask(openCategory.id, taskId, updater)}
         onDeleteTask={taskId => deleteTask(openCategory.id, taskId)}
         onDuplicateTask={task => duplicateTask(openCategory.id, task)} />
