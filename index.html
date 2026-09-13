@@ -2037,11 +2037,17 @@ function ChecklistRow({ item, onToggle, onEdit, onDelete }) {
   );
 }
 
-function NoteTaskCard({ task, onRename, onDelete, onDuplicate, onAddItem, onToggleItem, onEditItem, onDeleteItem }) {
+function NoteTaskCard({ task, onRename, onDelete, onDuplicate, onAddItem, onToggleItem, onEditItem, onDeleteItem, autoFocusItems }) {
   const [titleEditing, setTitleEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState(task.title);
   const [newItem, setNewItem] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const itemInputRef = useRef(null);
+  const hasTitle = !!(task.title && task.title.trim());
+
+  useEffect(() => {
+    if (autoFocusItems && itemInputRef.current) itemInputRef.current.focus();
+  }, []);
 
   const commitTitle = () => {
     const v = titleDraft.trim();
@@ -2063,9 +2069,12 @@ function NoteTaskCard({ task, onRename, onDelete, onDuplicate, onAddItem, onTogg
         {titleEditing ? (
           <input autoFocus value={titleDraft} onChange={e => setTitleDraft(e.target.value)}
             onBlur={commitTitle} onKeyDown={e => { if (e.key === 'Enter') commitTitle(); if (e.key === 'Escape') { setTitleDraft(task.title); setTitleEditing(false); } }}
-            className="flex-1 font-display font-semibold text-[15px] px-2 py-1 rounded-lg border border-purple outline-none animate-pop" />
+            placeholder="Checklist" className="flex-1 font-display font-semibold text-[15px] px-2 py-1 rounded-lg border border-purple outline-none animate-pop" />
         ) : (
-          <h3 onClick={() => setTitleEditing(true)} className="font-display font-semibold text-[15px] text-ink cursor-text">{task.title}</h3>
+          <h3 onClick={() => setTitleEditing(true)}
+            className={`font-display font-semibold text-[15px] cursor-text ${hasTitle ? 'text-ink' : 'text-slateText italic font-medium'}`}>
+            {hasTitle ? task.title : 'Checklist'}
+          </h3>
         )}
         <div className="flex items-center gap-0.5 shrink-0">
           {task.items.length > 0 && <span className="text-[11px] text-slateText mr-1.5">{done}/{task.items.length}</span>}
@@ -2085,13 +2094,13 @@ function NoteTaskCard({ task, onRename, onDelete, onDuplicate, onAddItem, onTogg
       </div>
 
       <div className="flex gap-2 mt-2">
-        <input value={newItem} onChange={e => setNewItem(e.target.value)}
+        <input ref={itemInputRef} value={newItem} onChange={e => setNewItem(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }}
           placeholder="Add checklist item..." className={inputCls + ' text-sm py-2 transition-shadow'} />
         <button onClick={addItem} className="px-3 rounded-xl border border-line text-sm font-medium text-slateText hover:bg-slate-100 active:scale-95 transition-all shrink-0">Add</button>
       </div>
 
-      <ConfirmDialog open={confirmDelete} title="Delete this task?" message={`"${task.title}" and its checklist will be permanently removed.`}
+      <ConfirmDialog open={confirmDelete} title="Delete this?" message={`"${hasTitle ? task.title : 'Checklist'}" and its items will be permanently removed.`}
         confirmLabel="Delete" danger onCancel={() => setConfirmDelete(false)} onConfirm={() => { onDelete(); setConfirmDelete(false); }} />
     </div>
   );
@@ -2102,6 +2111,9 @@ function NoteCategorySection({ category, onRename, onDelete, onAddTask, onUpdate
   const [nameDraft, setNameDraft] = useState(category.name);
   const [newTask, setNewTask] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // addStage: 'idle' -> single "+ Add" button | 'choose' -> pick Task or Checklist | 'task' -> title input
+  const [addStage, setAddStage] = useState('idle');
+  const [autoFocusTaskId, setAutoFocusTaskId] = useState(null);
 
   const commitName = () => {
     const v = nameDraft.trim();
@@ -2114,11 +2126,17 @@ function NoteCategorySection({ category, onRename, onDelete, onAddTask, onUpdate
     if (!v) return;
     onAddTask(v);
     setNewTask('');
+    setAddStage('idle');
+  };
+  const addChecklistDirect = () => {
+    const id = onAddTask('');
+    setAutoFocusTaskId(id);
+    setAddStage('idle');
   };
 
   return (
-    <div className="mb-8 animate-fade">
-      <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-line">
+    <div className="mb-6 rounded-2xl border border-line bg-white shadow-card p-5 sm:p-6 animate-fade">
+      <div className="flex items-center justify-between gap-2 mb-5 pb-4 border-b border-line">
         <div className="flex items-center gap-2 min-w-0">
           <IconBadge icon="folder" tone="soft" size={32} iconSize={15} />
           {nameEditing ? (
@@ -2139,6 +2157,7 @@ function NoteCategorySection({ category, onRename, onDelete, onAddTask, onUpdate
         <div className="grid sm:grid-cols-2 gap-4 mb-4">
           {category.tasks.map(task => (
             <NoteTaskCard key={task.id} task={task}
+              autoFocusItems={task.id === autoFocusTaskId}
               onRename={title => onUpdateTask(task.id, t => ({ ...t, title, updatedAt: new Date().toISOString() }))}
               onDelete={() => onDeleteTask(task.id)}
               onDuplicate={() => onDuplicateTask(task)}
@@ -2150,14 +2169,44 @@ function NoteCategorySection({ category, onRename, onDelete, onAddTask, onUpdate
         </div>
       )}
 
-      <div className="flex gap-2">
-        <input value={newTask} onChange={e => setNewTask(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') addTask(); }}
-          placeholder="New task name..." className={inputCls + ' text-sm'} />
-        <button onClick={addTask} className="inline-flex items-center gap-1.5 px-4 rounded-xl bg-purple hover:bg-purple/90 text-white text-sm font-semibold shrink-0 transition-all active:scale-95">
-          <Icon name="plus" size={14} />Add Task
+      {addStage === 'idle' && (
+        <button onClick={() => setAddStage('choose')}
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-line py-2.5 text-sm font-medium text-slateText transition-colors hover:border-purpleLight hover:text-purple hover:bg-purple/5">
+          <Icon name="plus" size={14} />Add
         </button>
-      </div>
+      )}
+
+      {addStage === 'choose' && (
+        <div className="flex flex-wrap gap-2 animate-pop">
+          <button onClick={() => setAddStage('task')}
+            className="flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-xl border border-line py-2.5 text-sm font-medium text-ink transition-all hover:border-purpleLight hover:bg-purple/5 active:scale-95">
+            <Icon name="fileText" size={14} className="text-purple" />Task
+          </button>
+          <button onClick={addChecklistDirect}
+            className="flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-xl border border-line py-2.5 text-sm font-medium text-ink transition-all hover:border-purpleLight hover:bg-purple/5 active:scale-95">
+            <Icon name="checkSquare" size={14} className="text-purple" />Checklist
+          </button>
+          <button onClick={() => setAddStage('idle')} aria-label="Cancel"
+            className="px-3 rounded-xl border border-line text-slateText hover:bg-slate-100 transition-colors shrink-0">
+            <Icon name="x" size={14} />
+          </button>
+        </div>
+      )}
+
+      {addStage === 'task' && (
+        <div className="flex gap-2 animate-pop">
+          <input autoFocus value={newTask} onChange={e => setNewTask(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') addTask(); if (e.key === 'Escape') { setNewTask(''); setAddStage('idle'); } }}
+            placeholder="Task name..." className={inputCls + ' text-sm'} />
+          <button onClick={addTask} className="inline-flex items-center gap-1.5 px-4 rounded-xl bg-purple hover:bg-purple/90 text-white text-sm font-semibold shrink-0 transition-all active:scale-95">
+            <Icon name="plus" size={14} />Add Task
+          </button>
+          <button onClick={() => { setNewTask(''); setAddStage('idle'); }} aria-label="Cancel"
+            className="px-3 rounded-xl border border-line text-slateText hover:bg-slate-100 transition-colors shrink-0">
+            <Icon name="x" size={14} />
+          </button>
+        </div>
+      )}
 
       <ConfirmDialog open={confirmDelete} title="Delete this category?" message={`"${category.name}" and all its tasks will be permanently removed.`}
         confirmLabel="Delete" danger onCancel={() => setConfirmDelete(false)} onConfirm={() => { onDelete(); setConfirmDelete(false); }} />
@@ -2182,12 +2231,17 @@ function NotesPage({ user }) {
   const renameCategory = (id, name) => setCategories(prev => prev.map(c => c.id === id ? { ...c, name } : c));
   const deleteCategory = id => setCategories(prev => prev.filter(c => c.id !== id));
 
-  const addTask = (categoryId, title) => setCategories(prev => prev.map(c => c.id === categoryId ? { ...c, tasks: [...c.tasks, makeNoteTask(categoryId, title)] } : c));
+  const addTask = (categoryId, title) => {
+    const task = makeNoteTask(categoryId, title);
+    setCategories(prev => prev.map(c => c.id === categoryId ? { ...c, tasks: [...c.tasks, task] } : c));
+    return task.id;
+  };
   const updateTask = (categoryId, taskId, updater) => setCategories(prev => prev.map(c => c.id === categoryId
     ? { ...c, tasks: c.tasks.map(t => t.id === taskId ? updater(t) : t) } : c));
   const deleteTask = (categoryId, taskId) => setCategories(prev => prev.map(c => c.id === categoryId ? { ...c, tasks: c.tasks.filter(t => t.id !== taskId) } : c));
   const duplicateTask = (categoryId, task) => {
-    const copy = makeNoteTask(categoryId, `${task.title} (Copy)`, task.items.map(i => ({ ...i, id: uid(), completed: false })));
+    const baseTitle = task.title && task.title.trim() ? task.title : 'Checklist';
+    const copy = makeNoteTask(categoryId, `${baseTitle} (Copy)`, task.items.map(i => ({ ...i, id: uid(), completed: false })));
     setCategories(prev => prev.map(c => c.id === categoryId ? { ...c, tasks: [...c.tasks, copy] } : c));
   };
 
