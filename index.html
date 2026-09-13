@@ -2009,23 +2009,30 @@ function ChecklistRow({ item, onToggle, onEdit, onDelete }) {
     setEditing(false);
   };
   return (
-    <div className="group flex items-center gap-2.5 py-1.5">
+    <div className="group flex items-center gap-2.5 py-1.5 animate-fade">
       <button onClick={onToggle}
-        className={`shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors
-          ${item.completed ? 'bg-purple border-purple text-white' : 'border-line text-transparent hover:border-purple'}`}>
+        className={`shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-150
+          ${item.completed ? 'bg-purple border-purple text-white animate-check' : 'border-line text-transparent hover:border-purple hover:scale-110'}`}>
         <Icon name="checkSquare" size={11} />
       </button>
       {editing ? (
         <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
           onBlur={commit} onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(item.text); setEditing(false); } }}
-          className="flex-1 text-sm px-2 py-1 rounded-lg border border-purple outline-none" />
+          className="flex-1 text-sm px-2 py-1 rounded-lg border border-purple outline-none animate-pop" />
       ) : (
         <span onClick={() => setEditing(true)}
-          className={`flex-1 text-sm cursor-text ${item.completed ? 'line-through text-slate-400' : 'text-ink'}`}>{item.text}</span>
+          className={`flex-1 text-sm cursor-text transition-colors ${item.completed ? 'line-through text-slate-400' : 'text-ink'}`}>{item.text}</span>
       )}
-      <button onClick={onDelete} className="opacity-0 group-hover:opacity-100 shrink-0 text-slate-300 hover:text-rose-500 transition-opacity">
-        <Icon name="x" size={14} />
-      </button>
+      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <button onClick={() => setEditing(true)} aria-label="Edit" title="Edit"
+          className="p-1 rounded-md text-slate-300 hover:text-purple hover:bg-purple/10 transition-colors">
+          <Icon name="edit" size={13} />
+        </button>
+        <button onClick={onDelete} aria-label="Delete" title="Delete"
+          className="p-1 rounded-md text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors">
+          <Icon name="x" size={14} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -2051,17 +2058,18 @@ function NoteTaskCard({ task, onRename, onDelete, onDuplicate, onAddItem, onTogg
   const done = task.items.filter(i => i.completed).length;
 
   return (
-    <div className="rounded-2xl border border-line bg-white p-5 shadow-card">
+    <div className="rounded-2xl border border-line bg-white p-5 shadow-card animate-pop transition-all duration-200 hover:shadow-pop hover:-translate-y-0.5">
       <div className="flex items-center justify-between gap-2 mb-3">
         {titleEditing ? (
           <input autoFocus value={titleDraft} onChange={e => setTitleDraft(e.target.value)}
             onBlur={commitTitle} onKeyDown={e => { if (e.key === 'Enter') commitTitle(); if (e.key === 'Escape') { setTitleDraft(task.title); setTitleEditing(false); } }}
-            className="flex-1 font-display font-semibold text-[15px] px-2 py-1 rounded-lg border border-purple outline-none" />
+            className="flex-1 font-display font-semibold text-[15px] px-2 py-1 rounded-lg border border-purple outline-none animate-pop" />
         ) : (
           <h3 onClick={() => setTitleEditing(true)} className="font-display font-semibold text-[15px] text-ink cursor-text">{task.title}</h3>
         )}
         <div className="flex items-center gap-0.5 shrink-0">
           {task.items.length > 0 && <span className="text-[11px] text-slateText mr-1.5">{done}/{task.items.length}</span>}
+          <IconButton icon="edit" label="Rename" onClick={() => setTitleEditing(true)} size={14} />
           <IconButton icon="copy" label="Duplicate" onClick={onDuplicate} size={14} />
           <IconButton icon="trash" label="Delete task" onClick={() => setConfirmDelete(true)} size={14} />
         </div>
@@ -2079,8 +2087,8 @@ function NoteTaskCard({ task, onRename, onDelete, onDuplicate, onAddItem, onTogg
       <div className="flex gap-2 mt-2">
         <input value={newItem} onChange={e => setNewItem(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }}
-          placeholder="Add checklist item..." className={inputCls + ' text-sm py-2'} />
-        <button onClick={addItem} className="px-3 rounded-xl border border-line text-sm font-medium text-slateText hover:bg-slate-100 shrink-0">Add</button>
+          placeholder="Add checklist item..." className={inputCls + ' text-sm py-2 transition-shadow'} />
+        <button onClick={addItem} className="px-3 rounded-xl border border-line text-sm font-medium text-slateText hover:bg-slate-100 active:scale-95 transition-all shrink-0">Add</button>
       </div>
 
       <ConfirmDialog open={confirmDelete} title="Delete this task?" message={`"${task.title}" and its checklist will be permanently removed.`}
@@ -2109,19 +2117,22 @@ function NoteCategorySection({ category, onRename, onDelete, onAddTask, onUpdate
   };
 
   return (
-    <div className="mb-8">
+    <div className="mb-8 animate-fade">
       <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-line">
         <div className="flex items-center gap-2 min-w-0">
           <IconBadge icon="folder" tone="soft" size={32} iconSize={15} />
           {nameEditing ? (
             <input autoFocus value={nameDraft} onChange={e => setNameDraft(e.target.value)}
               onBlur={commitName} onKeyDown={e => { if (e.key === 'Enter') commitName(); if (e.key === 'Escape') { setNameDraft(category.name); setNameEditing(false); } }}
-              className="font-display font-bold text-lg px-2 py-1 rounded-lg border border-purple outline-none" />
+              className="font-display font-bold text-lg px-2 py-1 rounded-lg border border-purple outline-none animate-pop" />
           ) : (
             <h2 onClick={() => setNameEditing(true)} className="font-display font-bold text-lg text-ink cursor-text truncate">{category.name}</h2>
           )}
         </div>
-        <IconButton icon="trash" label="Delete category" onClick={() => setConfirmDelete(true)} />
+        <div className="flex items-center gap-0.5 shrink-0">
+          <IconButton icon="edit" label="Rename" onClick={() => setNameEditing(true)} />
+          <IconButton icon="trash" label="Delete category" onClick={() => setConfirmDelete(true)} />
+        </div>
       </div>
 
       {category.tasks.length > 0 && (
@@ -2143,7 +2154,7 @@ function NoteCategorySection({ category, onRename, onDelete, onAddTask, onUpdate
         <input value={newTask} onChange={e => setNewTask(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') addTask(); }}
           placeholder="New task name..." className={inputCls + ' text-sm'} />
-        <button onClick={addTask} className="inline-flex items-center gap-1.5 px-4 rounded-xl bg-purple hover:bg-purple/90 text-white text-sm font-semibold shrink-0">
+        <button onClick={addTask} className="inline-flex items-center gap-1.5 px-4 rounded-xl bg-purple hover:bg-purple/90 text-white text-sm font-semibold shrink-0 transition-all active:scale-95">
           <Icon name="plus" size={14} />Add Task
         </button>
       </div>
@@ -2189,16 +2200,16 @@ function NotesPage({ user }) {
         </div>
         {!addingCategory ? (
           <button onClick={() => setAddingCategory(true)}
-            className="inline-flex items-center gap-2 bg-purple hover:bg-purple/90 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-card transition-colors shrink-0">
+            className="inline-flex items-center gap-2 bg-purple hover:bg-purple/90 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-card transition-all hover:-translate-y-0.5 active:scale-95 shrink-0">
             <Icon name="plus" size={16} />Add Category
           </button>
         ) : (
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex gap-2 w-full sm:w-auto animate-pop">
             <input autoFocus value={newCategory} onChange={e => setNewCategory(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') addCategory(); if (e.key === 'Escape') { setAddingCategory(false); setNewCategory(''); } }}
               placeholder="Category name..." className={inputCls + ' text-sm'} />
-            <button onClick={addCategory} className="px-4 rounded-xl bg-purple hover:bg-purple/90 text-white text-sm font-semibold shrink-0">Add</button>
-            <button onClick={() => { setAddingCategory(false); setNewCategory(''); }} className="px-3 rounded-xl border border-line text-slateText hover:bg-slate-100 shrink-0"><Icon name="x" size={14} /></button>
+            <button onClick={addCategory} className="px-4 rounded-xl bg-purple hover:bg-purple/90 text-white text-sm font-semibold shrink-0 transition-colors active:scale-95">Add</button>
+            <button onClick={() => { setAddingCategory(false); setNewCategory(''); }} className="px-3 rounded-xl border border-line text-slateText hover:bg-slate-100 shrink-0 transition-colors"><Icon name="x" size={14} /></button>
           </div>
         )}
       </div>
