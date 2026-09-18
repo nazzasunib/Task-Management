@@ -42,8 +42,10 @@
 </script>
 <style>
   * { -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; background: #F8FAFC; }
+  html, body { height: 100%; background: #F8FAFC; overflow: hidden; overscroll-behavior-y: none; }
   body { font-family: 'Inter', sans-serif; color: #111827; }
+  #root { height: 100%; overflow: hidden; }
+  .app-scroll { overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
   .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 8px; }
@@ -632,7 +634,7 @@ function ModalShell({ open, onClose, children, wide }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/40 backdrop-blur-sm animate-fade" onMouseDown={onClose}>
       <div onMouseDown={e => e.stopPropagation()}
-        className={`w-full ${wide ? 'max-w-lg' : 'max-w-md'} max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-pop animate-pop`}>
+        className={`app-scroll w-full ${wide ? 'max-w-lg' : 'max-w-md'} max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-pop animate-pop`}>
         {children}
       </div>
     </div>
@@ -978,7 +980,7 @@ function Sidebar({ view, setView, collapsed, setCollapsed, mobileOpen, setMobile
             ? <img src={LOGO_WHITE_ICON} alt="Task Management" className="w-8 h-8 select-none pointer-events-none" draggable="false" />
             : <img src={LOGO_WHITE_HORIZ} alt="Task Management logo" className="h-7 w-auto select-none pointer-events-none" draggable="false" />}
         </div>
-        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto scrollbar-none">
+        <nav className="app-scroll flex-1 py-4 px-3 space-y-1 overflow-y-auto scrollbar-none">
           {NAV_ITEMS.map(item => {
             const active = view === item.key;
             return (
@@ -1047,7 +1049,7 @@ function NotificationDropdown({ tasks, reminders = [] }) {
       {open && (
         <div className="absolute right-0 z-30 mt-2 w-80 bg-white rounded-2xl shadow-pop border border-line animate-pop overflow-hidden">
           <div className="px-4 py-3 border-b border-line font-display font-semibold text-sm text-ink">Notifications</div>
-          <div className="max-h-72 overflow-y-auto">
+          <div className="app-scroll max-h-72 overflow-y-auto">
             {items.map((n, i) => (
               <div key={i} className="flex items-start gap-3 px-4 py-3 border-b border-line last:border-0 hover:bg-slate-50">
                 <IconBadge icon={n.icon} size={32} iconSize={15} tone="soft" />
@@ -1111,7 +1113,7 @@ function StatHistoryModal({ open, onClose, title, tone, tasks }) {
           </div>
           <IconButton icon="x" label="Close" onClick={onClose} />
         </div>
-        <div className="mt-4 max-h-[60vh] overflow-y-auto -mx-2 px-2">
+        <div className="app-scroll mt-4 max-h-[60vh] overflow-y-auto -mx-2 px-2">
           {sorted.length === 0 ? (
             <EmptyState icon="fileText" title="Nothing here yet" subtitle="Tasks that match this stat will show up here." />
           ) : (
@@ -1931,7 +1933,7 @@ function Workspace({ user, onLogout, onUpdateUser }) {
       <Sidebar view={view} setView={setView} collapsed={collapsed} setCollapsed={setCollapsed} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} user={user} onLogout={onLogout} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header view={view} onOpenMobile={() => setMobileOpen(true)} searchQuery={searchQuery} setSearchQuery={setSearchQuery} tasks={tasks} reminders={reminders} user={user} onGoSettings={() => setView('settings')} />
-        <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+        <main className="app-scroll flex-1 overflow-y-auto px-4 md:px-8 py-6">
           {view === 'dashboard' && (
             <DashboardPage tasks={tasks} rangeFrom={dashRangeFrom} rangeTo={dashRangeTo}
               setRangeFrom={setDashRangeFrom} setRangeTo={setDashRangeTo}
