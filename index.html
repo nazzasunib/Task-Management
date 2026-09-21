@@ -107,6 +107,8 @@ const ICON_PATHS = {
   rangeArrow: <path d="M5 12h13m0 0-4.5-4.5M18 12l-4.5 4.5"/>,
   folder: <path d="M3.5 6.5a1.5 1.5 0 0 1 1.5-1.5h4l2 2.2h8a1.5 1.5 0 0 1 1.5 1.5v9.3a1.5 1.5 0 0 1-1.5 1.5h-14a1.5 1.5 0 0 1-1.5-1.5V6.5Z"/>,
   copy: <><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></>,
+  undo: <><path d="M3 8h11a5.5 5.5 0 0 1 0 11h-5"/><path d="m7 4-4 4 4 4"/></>,
+  redo: <><path d="M21 8H10a5.5 5.5 0 0 0 0 11h5"/><path d="m17 4 4 4-4 4"/></>,
 };
 function Icon({ name, size = 18, className = '', strokeWidth = 2 }) {
   return (
@@ -130,6 +132,33 @@ const fmtMed = key => parseKey(key).toLocaleDateString('en-US', { weekday: 'shor
 const monthLabel = (y, m) => new Date(y, m, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 const firstOfMonthKey = key => { const d = parseKey(key); return toKey(new Date(d.getFullYear(), d.getMonth(), 1)); };
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2));
+
+/* ---- Multi-day ("long") tasks ----
+   A long task carries an endDate alongside currentDate, and shows up on every
+   day between the two instead of just the one. taskStart/taskEnd normalise the
+   pair so the rest of the app never has to care whether a task is a range. */
+const taskStart = t => t.currentDate;
+const taskEnd = t => (t.isRange && t.endDate && t.endDate > t.currentDate) ? t.endDate : t.currentDate;
+const isLongTask = t => taskEnd(t) > taskStart(t);
+const taskSpan = t => daysDiff(taskStart(t), taskEnd(t)) + 1;
+// The day a long task was finished on, if it was finished early. Finishing a range task
+// stops its run there: the remaining days of the range no longer show it.
+const completedOn = t => (t.status === 'completed' && t.completedAt) ? toKey(new Date(t.completedAt)) : null;
+// The last day the task actually occupies — the end of the range, or the day it was completed.
+const effectiveEnd = t => {
+  const done = completedOn(t);
+  const end = taskEnd(t);
+  if (!done) return end;
+  if (done < taskStart(t)) return taskStart(t);
+  return done < end ? done : end;
+};
+// Does this task belong on the given day? Single-day tasks match one key; range tasks
+// match every day from the start through their effective end.
+const occursOn = (t, key) => key >= taskStart(t) && key <= effectiveEnd(t);
+// Which day of the run is `key` — 1-based, for the "Day 2 of 5" badge.
+const dayIndex = (t, key) => daysDiff(taskStart(t), key) + 1;
+// Overlap test used by range views (dashboard, summary, filters).
+const overlapsRange = (t, lo, hi) => taskStart(t) <= hi && effectiveEnd(t) >= lo;
 const fmtTime = t => {
   if (!t) return '';
   const [h, m] = t.split(':').map(Number);
@@ -181,6 +210,8 @@ function makeTask(overrides) {
     dueTime: '',
     originalDate: date,
     currentDate: date,
+    isRange: false,
+    endDate: null,
     status: 'pending',
     isRolledOver: false,
     rolloverCount: 0,
@@ -219,7 +250,9 @@ function loadTasks(userId) {
 function persistTasks(tasks, userId) {
   try { localStorage.setItem(tasksKey(userId), JSON.stringify(tasks)); } catch (e) {}
 }
-// Rolls forward any unfinished task whose current due date is before today.
+// Rolls forward any unfinished task whose last scheduled day is already behind us.
+// A long task is only late once its whole range has passed, so it keeps its span
+// (start and end both shift by the same number of days) when it does roll.
 // Guarded by a per-user check-key so re-opening the app the same day never double-rolls.
 function runRollover(tasks, userId) {
   const today = todayKey();
@@ -227,10 +260,17 @@ function runRollover(tasks, userId) {
   if (lastCheck === today) return { tasks, changed: false };
   let changed = false;
   const updated = tasks.map(t => {
-    if (t.status !== 'completed' && t.currentDate < today) {
+    if (t.status !== 'completed' && taskEnd(t) < today) {
       changed = true;
-      const diff = daysDiff(t.currentDate, today);
-      return { ...t, currentDate: today, isRolledOver: true, rolloverCount: t.rolloverCount + diff };
+      const span = taskSpan(t) - 1;
+      const diff = daysDiff(taskEnd(t), today);
+      return {
+        ...t,
+        currentDate: today,
+        endDate: span > 0 ? addDays(today, span) : t.endDate,
+        isRolledOver: true,
+        rolloverCount: t.rolloverCount + diff,
+      };
     }
     return t;
   });
@@ -251,9 +291,14 @@ function saveNotified(userId, set) {
 /* ======================= SUMMARY PDF ======================= */
 function buildSummaryRange(tasks, from, to) {
   const lo = from <= to ? from : to, hi = from <= to ? to : from;
-  const inRange = tasks.filter(t => t.currentDate >= lo && t.currentDate <= hi);
+  const inRange = tasks.filter(t => overlapsRange(t, lo, hi));
   const byDate = {};
-  inRange.forEach(t => { (byDate[t.currentDate] = byDate[t.currentDate] || []).push(t); });
+  inRange.forEach(t => {
+    const from = taskStart(t) > lo ? taskStart(t) : lo;
+    const end = effectiveEnd(t);
+    const to = end < hi ? end : hi;
+    for (let k = from; k <= to; k = addDays(k, 1)) (byDate[k] = byDate[k] || []).push(t);
+  });
   const dates = Object.keys(byDate).sort();
   const completedTasks = inRange.filter(t => t.status === 'completed');
   // "On-time" = finished without ever being carried over from an earlier day;
@@ -580,8 +625,15 @@ function DateRangeSelector({ from, to, onFromChange, onToChange, taskCounts, onR
 }
 
 /* ======================= TASK CARD ======================= */
-function TaskCard({ task, onToggle, onEdit, onDelete, onOpen }) {
+function TaskCard({ task, onToggle, onEdit, onDelete, onOpen, dayKey }) {
   const done = task.status === 'completed';
+  // For a long task, show which day of the run this card is standing on.
+  const long = isLongTask(task);
+  const span = taskSpan(task);
+  const onDay = long && dayKey && occursOn(task, dayKey) ? dayIndex(task, dayKey) : 0;
+  // Finished before the range was up: the run stopped early, so say so instead of "Day N of M".
+  const finishedDay = long && done ? completedOn(task) : null;
+  const finishedEarly = finishedDay && finishedDay < taskEnd(task);
   return (
     <div className={`group flex items-start gap-3 p-4 rounded-2xl border transition-all
       ${done ? 'bg-slate-50/70 border-line' : 'bg-white border-line hover:border-purpleLight hover:shadow-card'}`}>
@@ -596,6 +648,14 @@ function TaskCard({ task, onToggle, onEdit, onDelete, onOpen }) {
         <div className="flex items-center gap-1.5 mt-2 flex-wrap">
           <CategoryBadge category={task.category} />
           <PriorityBadge priority={task.priority} />
+          {long && (
+            <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1 ${finishedEarly ? 'bg-emerald-100 text-emerald-700' : 'bg-purple/10 text-purple'}`}>
+              <Icon name="calendar" size={10} />
+              {finishedEarly
+                ? `Finished day ${dayIndex(task, finishedDay)} of ${span}`
+                : onDay ? `Day ${onDay} of ${span}` : `${span}-day task`}
+            </span>
+          )}
           {task.isRolledOver && !done && (
             <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-navy/5 text-navy flex items-center gap-1">
               <Icon name="rotate" size={10} /> Rolled over {task.rolloverCount}×
@@ -604,6 +664,12 @@ function TaskCard({ task, onToggle, onEdit, onDelete, onOpen }) {
           {task.dueTime && !done && <span className="text-[11px] font-medium text-navy flex items-center gap-1"><Icon name="target" size={11} />Due {fmtTime(task.dueTime)}</span>}
           {task.estimatedTime && <span className="text-[11px] text-slateText flex items-center gap-1"><Icon name="clock" size={11} />{task.estimatedTime}</span>}
           {task.attachment && <span className="text-[11px] text-slateText flex items-center gap-1"><Icon name="paperclip" size={11} />Attachment</span>}
+          {long && (
+            <span className="text-[11px] text-slate-400">
+              {fmtShort(taskStart(task))} – {fmtShort(effectiveEnd(task))}
+              {finishedEarly && <span className="text-emerald-600"> (ended early)</span>}
+            </span>
+          )}
           {task.originalDate !== task.currentDate && (
             <span className="text-[11px] text-slate-400">Originally {fmtShort(task.originalDate)}</span>
           )}
@@ -616,13 +682,13 @@ function TaskCard({ task, onToggle, onEdit, onDelete, onOpen }) {
     </div>
   );
 }
-function TaskListSection({ title, tasks, ...handlers }) {
+function TaskListSection({ title, tasks, dayKey, ...handlers }) {
   if (!tasks.length) return null;
   return (
     <div className="mb-6">
       {title && <p className="text-xs font-semibold uppercase tracking-wide text-slateText mb-2.5 px-1">{title}</p>}
       <div className="space-y-2.5">
-        {tasks.map(t => <TaskCard key={t.id} task={t} {...handlers} />)}
+        {tasks.map(t => <TaskCard key={t.id} task={t} dayKey={dayKey} {...handlers} />)}
       </div>
     </div>
   );
@@ -654,11 +720,14 @@ function TaskFormModal({ open, onClose, onSubmit, initial, defaultDate, taskCoun
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(defaultDate || todayKey());
+  const [isRange, setIsRange] = useState(false);
+  const [endDate, setEndDate] = useState(defaultDate || todayKey());
   const [priority, setPriority] = useState('Medium');
   const [category, setCategory] = useState('Work');
   const [estimatedTime, setEstimatedTime] = useState('');
   const [dueTime, setDueTime] = useState('');
   const [showCal, setShowCal] = useState(false);
+  const [showEndCal, setShowEndCal] = useState(false);
   const [error, setError] = useState('');
   const [attachment, setAttachment] = useState(null);
   const [attaching, setAttaching] = useState(false);
@@ -671,12 +740,21 @@ function TaskFormModal({ open, onClose, onSubmit, initial, defaultDate, taskCoun
       setDate(initial.currentDate); setPriority(initial.priority);
       setCategory(initial.category); setEstimatedTime(initial.estimatedTime || '');
       setDueTime(initial.dueTime || ''); setAttachment(initial.attachment || null);
+      setIsRange(isLongTask(initial)); setEndDate(taskEnd(initial));
     } else {
       setTitle(''); setDescription(''); setDate(defaultDate || todayKey());
       setPriority('Medium'); setCategory('Work'); setEstimatedTime(''); setDueTime(''); setAttachment(null);
+      setIsRange(false); setEndDate(defaultDate || todayKey());
     }
-    setError(''); setShowCal(false);
+    setError(''); setShowCal(false); setShowEndCal(false);
   }, [open, initial, defaultDate]);
+
+  // Keep the end date from drifting behind the start date when the start moves.
+  const pickStart = (k) => {
+    setDate(k); setShowCal(false);
+    if (endDate < k) setEndDate(k);
+  };
+  const spanDays = isRange && endDate > date ? daysDiff(date, endDate) + 1 : 1;
 
   const pickFile = () => fileRef.current && fileRef.current.click();
   const onPickFile = async (e) => {
@@ -693,7 +771,13 @@ function TaskFormModal({ open, onClose, onSubmit, initial, defaultDate, taskCoun
 
   const submit = () => {
     if (!title.trim()) { setError('Give the task a title.'); return; }
-    onSubmit({ title: title.trim(), description: description.trim(), date, priority, category, estimatedTime: estimatedTime.trim(), dueTime, attachment });
+    if (isRange && endDate < date) { setError('End date cannot be before the start date.'); return; }
+    onSubmit({
+      title: title.trim(), description: description.trim(), date, priority, category,
+      estimatedTime: estimatedTime.trim(), dueTime, attachment,
+      isRange: isRange && endDate > date,
+      endDate: isRange && endDate > date ? endDate : null,
+    });
   };
 
   return (
@@ -713,14 +797,14 @@ function TaskFormModal({ open, onClose, onSubmit, initial, defaultDate, taskCoun
               value={description} onChange={e => setDescription(e.target.value)} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Date">
+            <Field label={isRange ? 'Start Date' : 'Date'}>
               <div className="relative">
-                <button type="button" onClick={() => setShowCal(s => !s)} className={`${inputCls} text-left flex items-center justify-between`}>
+                <button type="button" onClick={() => { setShowCal(s => !s); setShowEndCal(false); }} className={`${inputCls} text-left flex items-center justify-between`}>
                   {fmtShort(date)} <Icon name="calendar" size={15} className="text-purple" />
                 </button>
                 {showCal && (
                   <div className="absolute z-20 mt-2 bg-white rounded-2xl shadow-pop border border-line">
-                    <MiniCalendar selected={date} taskCounts={taskCounts} onSelect={k => { setDate(k); setShowCal(false); }} />
+                    <MiniCalendar selected={date} taskCounts={taskCounts} onSelect={pickStart} />
                   </div>
                 )}
               </div>
@@ -731,6 +815,40 @@ function TaskFormModal({ open, onClose, onSubmit, initial, defaultDate, taskCoun
                 <Icon name="clock" size={15} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-purple pointer-events-none" />
               </div>
             </Field>
+          </div>
+
+          {/* Long task: spreads one task across a date range so it shows up in
+              Today's Tasks every day until the end date passes. */}
+          <div className="rounded-xl border border-line bg-bg px-3.5 py-3">
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <input type="checkbox" className="w-4 h-4 accent-purple shrink-0" checked={isRange}
+                onChange={e => { setIsRange(e.target.checked); setShowEndCal(false); if (e.target.checked && endDate <= date) setEndDate(addDays(date, 1)); }} />
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-ink">Long Task (date range)</span>
+                <span className="block text-xs text-slateText">Shows in Today's Tasks every day until the end date.</span>
+              </span>
+            </label>
+            {isRange && (
+              <div className="mt-3">
+                <Field label="End Date">
+                  <div className="relative">
+                    <button type="button" onClick={() => { setShowEndCal(s => !s); setShowCal(false); }} className={`${inputCls} text-left flex items-center justify-between`}>
+                      {fmtShort(endDate)} <Icon name="calendar" size={15} className="text-purple" />
+                    </button>
+                    {showEndCal && (
+                      <div className="absolute z-20 mt-2 bg-white rounded-2xl shadow-pop border border-line">
+                        <MiniCalendar selected={endDate} taskCounts={taskCounts} onSelect={k => { setEndDate(k); setShowEndCal(false); }} />
+                      </div>
+                    )}
+                  </div>
+                </Field>
+                <p className={`mt-2 text-xs font-medium ${endDate < date ? 'text-red-500' : 'text-purple'}`}>
+                  {endDate < date
+                    ? 'End date is before the start date.'
+                    : `${fmtShort(date)} → ${fmtShort(endDate)} · ${spanDays} day${spanDays !== 1 ? 's' : ''}`}
+                </p>
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Priority">
@@ -783,6 +901,9 @@ function ChangeDateModal({ open, onClose, task, onConfirm, taskCounts }) {
   const [date, setDate] = useState(todayKey());
   useEffect(() => { if (task) setDate(task.currentDate); }, [task]);
   if (!task) return null;
+  // Moving a long task shifts the whole run; the end date follows the start by the same offset.
+  const span = taskSpan(task);
+  const movedEnd = span > 1 ? addDays(date, span - 1) : null;
   return (
     <ModalShell open={open} onClose={onClose}>
       <div className="p-6">
@@ -791,6 +912,11 @@ function ChangeDateModal({ open, onClose, task, onConfirm, taskCounts }) {
           <IconButton icon="x" label="Close" onClick={onClose} />
         </div>
         <p className="text-sm text-slateText mb-4 truncate">{task.title}</p>
+        {movedEnd && (
+          <p className="text-xs font-medium text-purple mb-3">
+            {span}-day task — moving it runs {fmtShort(date)} – {fmtShort(movedEnd)}.
+          </p>
+        )}
         <div className="flex justify-center">
           <MiniCalendar selected={date} taskCounts={taskCounts} onSelect={setDate} />
         </div>
@@ -824,6 +950,11 @@ function TaskDetailsModal({ open, onClose, task, onToggle, onEdit, onDelete, onC
           <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${task.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-purpleLight/20 text-purple'}`}>
             {task.status === 'completed' ? 'Completed' : task.isRolledOver ? 'Rolled Over' : 'Pending'}
           </span>
+          {isLongTask(task) && (
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-purple/10 text-purple flex items-center gap-1">
+              <Icon name="calendar" size={10} /> {taskSpan(task)}-day task
+            </span>
+          )}
         </div>
         {task.description && <p className="text-sm text-slateText mb-4 leading-relaxed">{task.description}</p>}
         {task.attachment && (
@@ -841,7 +972,18 @@ function TaskDetailsModal({ open, onClose, task, onToggle, onEdit, onDelete, onC
         <div className="border-t border-line pt-1">
           <Row label="Created" value={new Date(task.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })} />
           <Row label="Original Date" value={fmtShort(task.originalDate)} />
-          <Row label="Current Due Date" value={fmtShort(task.currentDate)} />
+          {isLongTask(task) ? (
+            <React.Fragment>
+              <Row label="Start Date" value={fmtShort(taskStart(task))} />
+              <Row label="End Date" value={fmtShort(taskEnd(task))} />
+              <Row label="Duration" value={`${taskSpan(task)} days`} />
+              {completedOn(task) && completedOn(task) < taskEnd(task) && (
+                <Row label="Finished Early On" value={`${fmtShort(completedOn(task))} · day ${dayIndex(task, completedOn(task))} of ${taskSpan(task)}`} />
+              )}
+            </React.Fragment>
+          ) : (
+            <Row label="Current Due Date" value={fmtShort(task.currentDate)} />
+          )}
           {task.dueTime && <Row label="Due Time" value={fmtTime(task.dueTime)} />}
           <Row label="Rollover Count" value={task.rolloverCount} />
           {task.estimatedTime && <Row label="Estimated Time" value={task.estimatedTime} />}
@@ -1030,7 +1172,7 @@ function NotificationDropdown({ tasks, reminders = [] }) {
     return () => document.removeEventListener('mousedown', h);
   }, []);
   const today = todayKey();
-  const todays = tasks.filter(t => t.currentDate === today);
+  const todays = tasks.filter(t => occursOn(t, today));
   const rolled = todays.filter(t => t.isRolledOver && t.status !== 'completed').length;
   const done = todays.filter(t => t.status === 'completed').length;
   const pct = todays.length ? Math.round((done / todays.length) * 100) : 0;
@@ -1062,7 +1204,7 @@ function NotificationDropdown({ tasks, reminders = [] }) {
     </div>
   );
 }
-function Header({ view, onOpenMobile, searchQuery, setSearchQuery, tasks, reminders, user, onGoSettings }) {
+function Header({ view, onOpenMobile, searchQuery, setSearchQuery, tasks, reminders, user, onGoSettings, onUndo, onRedo, canUndo, canRedo, undoLabel, redoLabel }) {
   const titleMap = { dashboard: 'Dashboard', today: "Today's Tasks", all: 'All Tasks', calendar: 'Calendar', completed: 'Completed Tasks', pending: 'Pending Tasks', notes: 'Notes', summary: 'Summary', settings: 'Settings' };
   const [mobileSearch, setMobileSearch] = useState(false);
   return (
@@ -1086,6 +1228,17 @@ function Header({ view, onOpenMobile, searchQuery, setSearchQuery, tasks, remind
           {searchQuery && <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slateText"><Icon name="x" size={14} /></button>}
         </div>
         <button onClick={() => setMobileSearch(s => !s)} className="md:hidden p-2.5 rounded-xl text-slateText hover:bg-slate-100"><Icon name="search" size={18} /></button>
+        {/* Undo / redo for task changes — also on Ctrl+Z and Ctrl+Y. */}
+        <div className="flex items-center gap-0.5">
+          <button onClick={onUndo} disabled={!canUndo} title={canUndo && undoLabel ? `Undo: ${undoLabel} (Ctrl+Z)` : 'Undo (Ctrl+Z)'} aria-label="Undo"
+            className="p-2.5 rounded-xl text-slateText hover:text-navy hover:bg-slate-100 transition-colors disabled:opacity-35 disabled:hover:bg-transparent disabled:cursor-not-allowed">
+            <Icon name="undo" size={18} />
+          </button>
+          <button onClick={onRedo} disabled={!canRedo} title={canRedo && redoLabel ? `Redo: ${redoLabel} (Ctrl+Y)` : 'Redo (Ctrl+Y)'} aria-label="Redo"
+            className="p-2.5 rounded-xl text-slateText hover:text-navy hover:bg-slate-100 transition-colors disabled:opacity-35 disabled:hover:bg-transparent disabled:cursor-not-allowed">
+            <Icon name="redo" size={18} />
+          </button>
+        </div>
         <NotificationDropdown tasks={tasks} reminders={reminders} />
         <button onClick={onGoSettings} title="My Profile" className="rounded-full hover:ring-2 hover:ring-purpleLight/40 transition-all">
           <Avatar user={user} size={36} />
@@ -1224,7 +1377,7 @@ function applyFilterSort(tasks, { status, priority, date, sortBy, sortDir, query
   else if (status === 'completed') out = out.filter(t => t.status === 'completed');
   else if (status === 'rolled') out = out.filter(t => t.isRolledOver && t.status !== 'completed');
   if (priority !== 'all') out = out.filter(t => t.priority === priority);
-  if (date) out = out.filter(t => t.currentDate === date);
+  if (date) out = out.filter(t => occursOn(t, date));
   const pWeight = { High: 3, Medium: 2, Low: 1 };
   const sWeight = { pending: 1, 'rolled-over': 1.5, completed: 2 };
   out = [...out].sort((a, b) => {
@@ -1244,7 +1397,7 @@ function applyFilterSort(tasks, { status, priority, date, sortBy, sortDir, query
 // rather than by convention, so it can't regress even if other pages change their own date logic.
 function TodayTasksPage({ tasks, searchQuery, onOpenAdd, ...handlers }) {
   const today = todayKey();
-  let dayTasks = tasks.filter(t => t.currentDate === today);
+  let dayTasks = tasks.filter(t => occursOn(t, today));
   if (searchQuery.trim()) {
     const q = searchQuery.trim().toLowerCase();
     dayTasks = dayTasks.filter(t => t.title.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q) || t.category.toLowerCase().includes(q));
@@ -1284,9 +1437,9 @@ function TodayTasksPage({ tasks, searchQuery, onOpenAdd, ...handlers }) {
         <EmptyState icon="checkSquare" title="Nothing scheduled" subtitle="Add a task for this day to get started." />
       ) : (
         <>
-          <TaskListSection title="Rolled Over" tasks={rolled} {...handlers} />
-          <TaskListSection title={rolled.length ? 'New Today' : 'Pending'} tasks={fresh} {...handlers} />
-          <TaskListSection title="Completed" tasks={completed} {...handlers} />
+          <TaskListSection title="Rolled Over" tasks={rolled} dayKey={today} {...handlers} />
+          <TaskListSection title={rolled.length ? 'New Today' : 'Pending'} tasks={fresh} dayKey={today} {...handlers} />
+          <TaskListSection title="Completed" tasks={completed} dayKey={today} {...handlers} />
         </>
       )}
     </div>
@@ -1300,7 +1453,7 @@ function DashboardPage({ tasks, rangeFrom, rangeTo, setRangeFrom, setRangeTo, ta
   const today = todayKey();
   const lo = rangeFrom <= rangeTo ? rangeFrom : rangeTo;
   const hi = rangeFrom <= rangeTo ? rangeTo : rangeFrom;
-  let rangeTasks = tasks.filter(t => t.currentDate >= lo && t.currentDate <= hi);
+  let rangeTasks = tasks.filter(t => overlapsRange(t, lo, hi));
   if (searchQuery.trim()) {
     const q = searchQuery.trim().toLowerCase();
     rangeTasks = rangeTasks.filter(t => t.title.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q) || t.category.toLowerCase().includes(q));
@@ -1314,9 +1467,15 @@ function DashboardPage({ tasks, rangeFrom, rangeTo, setRangeFrom, setRangeTo, ta
 
   const grouped = useMemo(() => {
     const byDate = {};
-    rangeTasks.forEach(t => { (byDate[t.currentDate] = byDate[t.currentDate] || []).push(t); });
+    // A long task is listed under every day of its run that falls inside the picked range.
+    rangeTasks.forEach(t => {
+      const from = taskStart(t) > lo ? taskStart(t) : lo;
+      const end = effectiveEnd(t);
+      const to = end < hi ? end : hi;
+      for (let k = from; k <= to; k = addDays(k, 1)) (byDate[k] = byDate[k] || []).push(t);
+    });
     return Object.keys(byDate).sort().reverse().map(k => ({ key: k, list: byDate[k] }));
-  }, [rangeTasks]);
+  }, [rangeTasks, lo, hi]);
 
   return (
     <div>
@@ -1350,9 +1509,9 @@ function DashboardPage({ tasks, rangeFrom, rangeTo, setRangeFrom, setRangeTo, ta
         <EmptyState icon="checkSquare" title="Nothing in this range" subtitle="Pick a different date range, or add a task to get started." />
       ) : isSingleDay ? (
         <>
-          <TaskListSection title="Rolled Over" tasks={rolled} {...handlers} />
-          <TaskListSection title={rolled.length ? 'New Today' : 'Pending'} tasks={fresh} {...handlers} />
-          <TaskListSection title="Completed" tasks={completed} {...handlers} />
+          <TaskListSection title="Rolled Over" tasks={rolled} dayKey={today} {...handlers} />
+          <TaskListSection title={rolled.length ? 'New Today' : 'Pending'} tasks={fresh} dayKey={today} {...handlers} />
+          <TaskListSection title="Completed" tasks={completed} dayKey={today} {...handlers} />
         </>
       ) : (
         grouped.map(g => {
@@ -1369,7 +1528,7 @@ function DashboardPage({ tasks, rangeFrom, rangeTo, setRangeFrom, setRangeTo, ta
                 </div>
               </div>
               <div className="space-y-2.5">
-                {g.list.map(t => <TaskCard key={t.id} task={t} {...handlers} />)}
+                {g.list.map(t => <TaskCard key={t.id} task={t} dayKey={g.key} {...handlers} />)}
               </div>
             </div>
           );
@@ -1422,11 +1581,11 @@ function CalendarPage({ tasks, taskCounts, onOpenAdd, ...handlers }) {
   const goNext = () => vm === 11 ? (setVm(0), setVy(y => y + 1)) : setVm(m => m + 1);
 
   const dayStats = key => {
-    const list = tasks.filter(t => t.currentDate === key);
+    const list = tasks.filter(t => occursOn(t, key));
     const done = list.filter(t => t.status === 'completed').length;
     return { total: list.length, done, pending: list.length - done };
   };
-  const selectedTasks = tasks.filter(t => t.currentDate === selected);
+  const selectedTasks = tasks.filter(t => occursOn(t, selected));
 
   return (
     <div>
@@ -1476,7 +1635,7 @@ function CalendarPage({ tasks, taskCounts, onOpenAdd, ...handlers }) {
       {selectedTasks.length === 0 ? (
         <EmptyState icon="calendar" title="No tasks this day" subtitle="Add one, or pick another date on the calendar." />
       ) : (
-        <div className="space-y-2.5">{selectedTasks.map(t => <TaskCard key={t.id} task={t} {...handlers} />)}</div>
+        <div className="space-y-2.5">{selectedTasks.map(t => <TaskCard key={t.id} task={t} dayKey={selected} {...handlers} />)}</div>
       )}
     </div>
   );
@@ -1538,9 +1697,9 @@ function PendingPage({ tasks, searchQuery, ...handlers }) {
     const q = searchQuery.trim().toLowerCase();
     pending = pending.filter(t => t.title.toLowerCase().includes(q) || t.category.toLowerCase().includes(q));
   }
-  const overdue = pending.filter(t => t.isRolledOver && t.currentDate === today);
-  const todays = pending.filter(t => !t.isRolledOver && t.currentDate === today);
-  const future = pending.filter(t => t.currentDate > today);
+  const overdue = pending.filter(t => t.isRolledOver && occursOn(t, today));
+  const todays = pending.filter(t => !t.isRolledOver && occursOn(t, today));
+  const future = pending.filter(t => taskStart(t) > today);
 
   return (
     <div>
@@ -1549,8 +1708,8 @@ function PendingPage({ tasks, searchQuery, ...handlers }) {
         <EmptyState icon="checkCircle" title="Inbox zero" subtitle="No pending tasks — nice work." />
       ) : (
         <>
-          <TaskListSection title="Overdue / Rolled Over" tasks={overdue} {...handlers} />
-          <TaskListSection title="Today" tasks={todays} {...handlers} />
+          <TaskListSection title="Overdue / Rolled Over" tasks={overdue} dayKey={today} {...handlers} />
+          <TaskListSection title="Today" tasks={todays} dayKey={today} {...handlers} />
           <TaskListSection title="Scheduled for the Future" tasks={future} {...handlers} />
         </>
       )}
@@ -1809,14 +1968,101 @@ function SettingsPage({ tasks, onClearAll, user, onLogout, onUpdateUser }) {
   );
 }
 
+/* ======================= UNDO / REDO =======================
+   Wraps the task list in an undo stack so a mis-click (ticking the wrong task
+   done, deleting one, moving a date) can be taken back with Ctrl+Z / Ctrl+Y.
+   Every deliberate edit pushes the previous list onto `past`; the automatic
+   midnight rollover uses setTasksSilently so it never lands in the history. */
+const UNDO_LIMIT = 50;
+function useUndoableTasks(initial) {
+  // One reducer holds present/past/future together, so a history entry can never
+  // drift out of step with the list it describes.
+  const [state, dispatch] = React.useReducer((st, action) => {
+    switch (action.type) {
+      case 'set': {
+        const next = typeof action.updater === 'function' ? action.updater(st.present) : action.updater;
+        if (next === st.present) return st;
+        // Each past entry carries the label of the action that moved us off it,
+        // so undoing three steps back still names the right change.
+        return {
+          present: next,
+          past: [...st.past, { tasks: st.present, label: action.label || 'Change' }].slice(-UNDO_LIMIT),
+          future: [],
+        };
+      }
+      case 'setSilent': {
+        const next = typeof action.updater === 'function' ? action.updater(st.present) : action.updater;
+        return next === st.present ? st : { ...st, present: next };
+      }
+      case 'undo': {
+        if (!st.past.length) return st;
+        const step = st.past[st.past.length - 1];
+        return {
+          present: step.tasks,
+          past: st.past.slice(0, -1),
+          future: [{ tasks: st.present, label: step.label }, ...st.future].slice(0, UNDO_LIMIT),
+        };
+      }
+      case 'redo': {
+        if (!st.future.length) return st;
+        const step = st.future[0];
+        return {
+          present: step.tasks,
+          past: [...st.past, { tasks: st.present, label: step.label }].slice(-UNDO_LIMIT),
+          future: st.future.slice(1),
+        };
+      }
+      case 'reset':
+        return { present: st.present, past: [], future: [] };
+      default:
+        return st;
+    }
+  }, undefined, () => ({
+    present: typeof initial === 'function' ? initial() : initial,
+    past: [], future: [],
+  }));
+
+  const setTasks = useCallback((updater, label) => dispatch({ type: 'set', updater, label }), []);
+  // For changes the person didn't make themselves (rollover) — no history entry.
+  const setTasksSilently = useCallback(updater => dispatch({ type: 'setSilent', updater }), []);
+  const resetHistory = useCallback(() => dispatch({ type: 'reset' }), []);
+  const undo = useCallback(() => dispatch({ type: 'undo' }), []);
+  const redo = useCallback(() => dispatch({ type: 'redo' }), []);
+
+  return { tasks: state.present, setTasks, setTasksSilently, undo, redo, resetHistory,
+    canUndo: state.past.length > 0, canRedo: state.future.length > 0,
+    // What the next undo / redo would take back, for the toast wording.
+    undoLabel: state.past.length ? state.past[state.past.length - 1].label : null,
+    redoLabel: state.future.length ? state.future[0].label : null };
+}
+
+// Small toast that confirms an undo/redo happened, so the change isn't silent.
+function UndoToast({ message, onDismiss }) {
+  useEffect(() => {
+    if (!message) return;
+    const t = setTimeout(onDismiss, 2600);
+    return () => clearTimeout(t);
+  }, [message, onDismiss]);
+  if (!message) return null;
+  return (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] animate-pop">
+      <div className="flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-navy text-white shadow-pop">
+        <Icon name="rotate" size={16} className="shrink-0" />
+        <span className="text-sm font-medium">{message}</span>
+      </div>
+    </div>
+  );
+}
+
 /* ======================= APP ======================= */
 function Workspace({ user, onLogout, onUpdateUser }) {
-  const [tasks, setTasks] = useState(() => {
+  const { tasks, setTasks, setTasksSilently, undo, redo, resetHistory, canUndo, canRedo, undoLabel, redoLabel } = useUndoableTasks(() => {
     const loaded = loadTasks(user.id);
     const { tasks: rolled } = runRollover(loaded, user.id);
     persistTasks(rolled, user.id);
     return rolled;
   });
+  const [toast, setToast] = useState(null);
   const [view, setView] = useState('dashboard');
   const [dashRangeFrom, setDashRangeFrom] = useState(() => firstOfMonthKey(todayKey()));
   const [dashRangeTo, setDashRangeTo] = useState(() => todayKey());
@@ -1835,7 +2081,7 @@ function Workspace({ user, onLogout, onUpdateUser }) {
   // periodic re-check in case app is left open across midnight
   useEffect(() => {
     const iv = setInterval(() => {
-      setTasks(prev => {
+      setTasksSilently(prev => {
         const { tasks: rolled, changed } = runRollover(prev, user.id);
         if (changed) persistTasks(rolled, user.id);
         return changed ? rolled : prev;
@@ -1860,7 +2106,7 @@ function Workspace({ user, onLogout, onUpdateUser }) {
       let changed = false;
       const fresh = [];
       tasks.forEach(t => {
-        if (t.status === 'completed' || !t.dueTime || t.currentDate !== today || notified.has(t.id)) return;
+        if (t.status === 'completed' || !t.dueTime || !occursOn(t, today) || notified.has(t.id)) return;
         const [h, m] = t.dueTime.split(':').map(Number);
         const due = new Date(); due.setHours(h, m, 0, 0);
         const minutesUntil = (due - now) / 60000;
@@ -1883,7 +2129,11 @@ function Workspace({ user, onLogout, onUpdateUser }) {
 
   const taskCounts = useMemo(() => {
     const map = {};
-    tasks.forEach(t => { map[t.currentDate] = (map[t.currentDate] || 0) + 1; });
+    // Long tasks put a dot on every day of their run, not only the start day.
+    tasks.forEach(t => {
+      const end = effectiveEnd(t);
+      for (let k = taskStart(t); k <= end; k = addDays(k, 1)) map[k] = (map[k] || 0) + 1;
+    });
     return map;
   }, [tasks]);
 
@@ -1896,35 +2146,73 @@ function Workspace({ user, onLogout, onUpdateUser }) {
       setTasks(prev => prev.map(t => t.id === editingTask.id ? {
         ...t, title: data.title, description: data.description, category: data.category,
         priority: data.priority, estimatedTime: data.estimatedTime, dueTime: data.dueTime, currentDate: data.date,
+        isRange: !!data.isRange, endDate: data.endDate || null,
         originalDate: data.date < t.originalDate ? data.date : t.originalDate, attachment: data.attachment || null,
-      } : t));
+      } : t), 'Edit task');
     } else {
-      setTasks(prev => [...prev, makeTask({ title: data.title, description: data.description, category: data.category, priority: data.priority, estimatedTime: data.estimatedTime, dueTime: data.dueTime, date: data.date, attachment: data.attachment || null })]);
+      setTasks(prev => [...prev, makeTask({ title: data.title, description: data.description, category: data.category, priority: data.priority, estimatedTime: data.estimatedTime, dueTime: data.dueTime, date: data.date, isRange: !!data.isRange, endDate: data.endDate || null, attachment: data.attachment || null })], 'Add task');
     }
     setAddOpen(false); setEditingTask(null);
   };
 
   const toggleComplete = (id) => {
+    const target = tasks.find(t => t.id === id);
+    const label = target && target.status === 'completed' ? 'Mark as pending' : 'Mark as done';
     setTasks(prev => prev.map(t => t.id === id ? (
       t.status === 'completed'
         ? { ...t, status: 'pending', completedAt: null }
         : { ...t, status: 'completed', completedAt: new Date().toISOString() }
-    ) : t));
+    ) : t), label);
     setViewingTask(v => v && v.id === id ? { ...v, status: v.status === 'completed' ? 'pending' : 'completed' } : v);
   };
   const requestDelete = (task) => setDeleteTarget(task);
   const confirmDelete = () => {
-    setTasks(prev => prev.filter(t => t.id !== deleteTarget.id));
+    setTasks(prev => prev.filter(t => t.id !== deleteTarget.id), 'Delete task');
     setDeleteTarget(null); setViewingTask(null);
   };
   const changeDate = (id, newDate) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, currentDate: newDate, isRolledOver: false } : t));
+    setTasks(prev => prev.map(t => {
+      if (t.id !== id) return t;
+      const span = taskSpan(t) - 1;
+      return { ...t, currentDate: newDate, endDate: span > 0 ? addDays(newDate, span) : t.endDate, isRolledOver: false };
+    }), 'Change date');
     setDateChangeTask(null); setViewingTask(null);
   };
   const clearAll = () => {
     localStorage.removeItem(tasksKey(user.id)); localStorage.removeItem(checkKey(user.id)); localStorage.removeItem(notifiedKey(user.id));
-    const seeded = seedTasks(); persistTasks(seeded, user.id); setTasks(seeded); setReminders([]);
+    const seeded = seedTasks(); persistTasks(seeded, user.id); setTasksSilently(seeded); resetHistory(); setReminders([]);
   };
+
+  // Undo/redo: the toast reports what was taken back, and any open modal closes so the
+  // person sees the restored list rather than a stale dialog.
+  const doUndo = useCallback(() => {
+    if (!canUndo) { setToast('Nothing to undo'); return; }
+    undo();
+    setViewingTask(null); setDateChangeTask(null); setDeleteTarget(null);
+    setToast(undoLabel ? `Undid: ${undoLabel}` : 'Undid last change');
+  }, [undo, canUndo, undoLabel]);
+
+  const doRedo = useCallback(() => {
+    if (!canRedo) { setToast('Nothing to redo'); return; }
+    redo();
+    setViewingTask(null); setDateChangeTask(null); setDeleteTarget(null);
+    setToast(redoLabel ? `Redid: ${redoLabel}` : 'Redid last change');
+  }, [redo, canRedo, redoLabel]);
+
+  // Ctrl+Z / Cmd+Z to undo, Ctrl+Y or Ctrl+Shift+Z to redo — ignored while typing in a field.
+  useEffect(() => {
+    const onKey = (e) => {
+      const el = e.target;
+      const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+      if (typing) return;
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); doUndo(); }
+      else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); doRedo(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [doUndo, doRedo]);
 
   const handlers = { onToggle: toggleComplete, onEdit: openEdit, onDelete: requestDelete, onOpen: openDetails };
 
@@ -1932,7 +2220,8 @@ function Workspace({ user, onLogout, onUpdateUser }) {
     <div className="flex h-screen overflow-hidden bg-bg font-body">
       <Sidebar view={view} setView={setView} collapsed={collapsed} setCollapsed={setCollapsed} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} user={user} onLogout={onLogout} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header view={view} onOpenMobile={() => setMobileOpen(true)} searchQuery={searchQuery} setSearchQuery={setSearchQuery} tasks={tasks} reminders={reminders} user={user} onGoSettings={() => setView('settings')} />
+        <Header view={view} onOpenMobile={() => setMobileOpen(true)} searchQuery={searchQuery} setSearchQuery={setSearchQuery} tasks={tasks} reminders={reminders} user={user} onGoSettings={() => setView('settings')}
+          onUndo={doUndo} onRedo={doRedo} canUndo={canUndo} canRedo={canRedo} undoLabel={undoLabel} redoLabel={redoLabel} />
         <main className="app-scroll flex-1 overflow-y-auto px-4 md:px-8 py-6">
           {view === 'dashboard' && (
             <DashboardPage tasks={tasks} rangeFrom={dashRangeFrom} rangeTo={dashRangeTo}
@@ -1959,6 +2248,7 @@ function Workspace({ user, onLogout, onUpdateUser }) {
       <ChangeDateModal open={!!dateChangeTask} onClose={() => setDateChangeTask(null)} task={dateChangeTask} onConfirm={changeDate} taskCounts={taskCounts} />
       <ConfirmDialog open={!!deleteTarget} title="Delete this task?" message={deleteTarget ? `"${deleteTarget.title}" will be permanently removed.` : ''}
         confirmLabel="Delete" danger onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete} />
+      <UndoToast message={toast} onDismiss={() => setToast(null)} />
     </div>
   );
 }
