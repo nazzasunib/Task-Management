@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---- original app styles ---- */
+* { -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: #F8FAFC; overflow: hidden; overscroll-behavior-y: none; }
+body { font-family: 'Inter', sans-serif; color: #111827; }
+#root { height: 100%; overflow: hidden; }
+.app-scroll { overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
+.font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2px solid #7C3AED; outline-offset: 2px; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { scrollbar-width: none; }
+@keyframes pop-in { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.animate-pop { animation: pop-in .16s ease-out; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.animate-fade { animation: fade-in .15s ease-out; }
+@keyframes check-pop { 0% { transform: scale(0.6); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+.animate-check { animation: check-pop .25s cubic-bezier(.34,1.56,.64,1); }
+
+/* ---- new polish ---- */
+/* Royal navy card gradient (same colour as the MealMate stat cards) */
+.tm-stat-card {
+  position: relative; overflow: hidden; isolation: isolate;
+  background-image: linear-gradient(135deg, #060f28 0%, #12295c 40%, #24448a 60%, #0b1f4b 100%);
+  background-size: 160% 160%; background-position: 0% 0%;
+  box-shadow: 0 10px 24px -14px rgba(11,31,75,.75), 0 1px 2px rgba(11,31,58,.08);
+  transition: transform .45s cubic-bezier(.34,1.56,.64,1), box-shadow .3s ease, background-position .8s ease;
+}
+.tm-stat-card::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(420px circle at var(--mx, 80%) var(--my, 0%), rgba(167,139,250,.22), transparent 45%);
+  opacity: .9; transition: opacity .3s;
+}
+.tm-stat-card:hover { transform: translateY(-4px) scale(1.015); background-position: 100% 100%; box-shadow: 0 20px 36px -16px rgba(11,31,75,.8), 0 2px 6px rgba(11,31,58,.1); }
+.tm-stat-card:active { transform: translateY(-1px) scale(.99); transition-duration: .1s; }
+.tm-stat-card--accent { background-image: linear-gradient(135deg, #0b1f4b 0%, #24448a 45%, #5b3fc4 75%, #12295c 100%); }
+
+.tm-auth-panel { background-image: linear-gradient(135deg, #060f28 0%, #0B1F3A 30%, #1a3570 55%, #3b2a8a 80%, #0b1f4b 100%); }
+.tm-glass { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 24px 48px -24px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.1); }
+.tm-grid { background-image: linear-gradient(rgba(255,255,255,.9) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.9) 1px, transparent 1px); background-size: 42px 42px; -webkit-mask-image: radial-gradient(ellipse at 40% 40%, #000 20%, transparent 75%); mask-image: radial-gradient(ellipse at 40% 40%, #000 20%, transparent 75%); animation: tm-drift 60s linear infinite; }
+.tm-grid-light { background-image: linear-gradient(#E2E8F0 1px, transparent 1px), linear-gradient(90deg, #E2E8F0 1px, transparent 1px); background-size: 36px 36px; opacity: .45; -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000 10%, transparent 70%); mask-image: radial-gradient(ellipse at 50% 40%, #000 10%, transparent 70%); }
+.tm-gradient-text { background: linear-gradient(90deg, #fff, #c4b5fd 55%, #a78bfa); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.tm-btn-primary { background-image: linear-gradient(135deg, #0B1F3A 0%, #4c2fc0 55%, #7C3AED 100%); background-size: 180% 100%; background-position: 0 0; box-shadow: 0 12px 24px -12px rgba(124,58,237,.6), inset 0 1px 0 rgba(255,255,255,.14); transition: background-position .5s ease, transform .15s ease, box-shadow .25s ease; }
+.tm-btn-primary:hover:not(:disabled) { background-position: 100% 0; box-shadow: 0 16px 30px -12px rgba(124,58,237,.7), inset 0 1px 0 rgba(255,255,255,.18); }
+.tm-btn-primary:active:not(:disabled) { transform: scale(.98); }
+
+@keyframes tm-drift { to { background-position: 42px 42px, 42px 42px; } }
+@keyframes tm-rise-kf { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+.tm-rise { animation: tm-rise-kf .6s cubic-bezier(.16,1,.3,1) both; }
+@keyframes tm-float-kf { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.tm-float { animation: tm-rise-kf .7s cubic-bezier(.16,1,.3,1) both, tm-float-kf 6s ease-in-out infinite; }
+@keyframes tm-blob-kf { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(30px, -24px) scale(1.12); } }
+.tm-blob { animation: tm-blob-kf 12s ease-in-out infinite; }
+@keyframes tm-orbit-kf { to { transform: rotate(360deg); } }
+.tm-orbit { background: conic-gradient(from 0deg, transparent 0 55%, #7C3AED 78%, #A78BFA 92%, transparent 100%); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px)); animation: tm-orbit-kf 1.1s linear infinite; }
+@keyframes tm-bar-kf { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
+.tm-bar { animation: tm-bar-kf 1.1s cubic-bezier(.16,1,.3,1) infinite; }
+@keyframes tm-page-kf { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.tm-page > * { animation: tm-page-kf .35s cubic-bezier(.16,1,.3,1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
+}
