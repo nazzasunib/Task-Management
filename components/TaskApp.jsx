@@ -2878,7 +2878,7 @@ function App() {
       const p = profileRes.data || {};
       let tasks = loaded.tasks;
       if (!p.seeded) {
-        if (!tasks.length) tasks = seedTasks(); // same welcome tasks the original app started with
+        // New accounts start empty — no demo/welcome tasks.
         await sb.from('tm_profiles').upsert({ id: authUser.id, seeded: true, full_name: p.full_name || authUser.user_metadata?.full_name || (authUser.email || '').split('@')[0], email: authUser.email || '' });
       }
       storeRef.current = store;
