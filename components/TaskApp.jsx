@@ -52,6 +52,7 @@ const ICON_PATHS = {
   mail: <><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="m3 7 9 6 9-6"/></>,
   lock: <><rect x="4" y="10.5" width="16" height="10.5" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></>,
   redo: <><path d="M21 8H10a5.5 5.5 0 0 0 0 11h5"/><path d="m17 4 4 4-4 4"/></>,
+  grip: <><circle cx="5" cy="5" r="1.2"/><circle cx="12" cy="5" r="1.2"/><circle cx="19" cy="5" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/><circle cx="5" cy="19" r="1.2"/><circle cx="12" cy="19" r="1.2"/><circle cx="19" cy="19" r="1.2"/></>,
 };
 function Icon({ name, size = 18, className = '', strokeWidth = 2 }) {
   return (
@@ -121,6 +122,71 @@ const NAV_ITEMS = [
   { key: 'summary', label: 'Summary', icon: 'fileText' },
   { key: 'settings', label: 'Settings', icon: 'settings' },
 ];
+
+/* ======================= ANDROID APP MODE =======================
+   The Android app (Capacitor) opens this same website. Only there does <html>
+   get the "tm-app" class (set early in app/layout.tsx from the app's user agent
+   "TaskManagementApp", the Capacitor bridge, or ?app=1 for previewing), and the
+   layout switches to a fixed bottom tab bar + "More" sheet. The website never
+   gets the class, so its sidebar layout is unchanged. */
+function detectAppMode() {
+  if (typeof window === 'undefined') return false;
+  const root = document.documentElement;
+  let on = root.classList.contains('tm-app');
+  try { if (!on && (navigator.userAgent || '').indexOf('TaskManagementApp') >= 0) on = true; } catch (e) {}
+  try { if (!on && window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) on = true; } catch (e) {}
+  try { if (!on && localStorage.getItem('tm-app-mode') === '1') on = true; } catch (e) {}
+  if (on) root.classList.add('tm-app');
+  return on;
+}
+const APP_TABS = [
+  { key: 'dashboard', label: 'Dashboard', icon: 'home' },
+  { key: 'today', label: "Today's Tasks", icon: 'checkSquare' },
+  { key: 'calendar', label: 'Calendar', icon: 'calendar' },
+  { key: 'notes', label: 'Notes', icon: 'folder' },
+];
+const APP_MORE_KEYS = ['all', 'summary', 'settings'];
+
+function BottomNav({ view, setView }) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const go = k => { setView(k); setMoreOpen(false); };
+  const moreActive = moreOpen || APP_MORE_KEYS.includes(view);
+  return (
+    <>
+      <nav className="tm-bottom-nav" aria-label="Main">
+        {APP_TABS.map(t => {
+          const active = view === t.key && !moreOpen;
+          return (
+            <button key={t.key} onClick={() => go(t.key)} className={`tm-tab${active ? ' is-active' : ''}`} aria-current={active ? 'page' : undefined}>
+              <Icon name={t.icon} size={20} strokeWidth={active ? 2.4 : 2} />
+              <span className="tm-tab-label">{t.label}</span>
+            </button>
+          );
+        })}
+        <button onClick={() => setMoreOpen(o => !o)} className={`tm-tab${moreActive ? ' is-active' : ''}`} aria-haspopup="dialog" aria-expanded={moreOpen}>
+          <Icon name="grip" size={20} strokeWidth={moreActive ? 2.4 : 2} />
+          <span className="tm-tab-label">More</span>
+        </button>
+      </nav>
+      {moreOpen && (
+        <>
+          <div className="tm-more-backdrop" onClick={() => setMoreOpen(false)} />
+          <div className="tm-more-sheet" role="dialog" aria-label="More">
+            <div className="tm-more-handle" aria-hidden="true" />
+            <div className="tm-more-grid">
+              {NAV_ITEMS.filter(i => APP_MORE_KEYS.includes(i.key)).map(i => (
+                <button key={i.key} onClick={() => go(i.key)} className={`tm-more-item${view === i.key ? ' is-active' : ''}`}>
+                  <span className="tm-more-icon"><Icon name={i.icon} size={20} /></span>
+                  <span>{i.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
 
 /* ======================= STORAGE + ROLLOVER ======================= */
 const tasksKey = userId => `momentum.tasks.${userId}.v1`;
@@ -1289,13 +1355,13 @@ function SyncPill({ state }) {
     </span>
   );
 }
-function Header({ view, onOpenMobile, searchQuery, setSearchQuery, tasks, reminders, user, onGoSettings, onUndo, onRedo, canUndo, canRedo, undoLabel, redoLabel, syncState }) {
+function Header({ appMode, view, onOpenMobile, searchQuery, setSearchQuery, tasks, reminders, user, onGoSettings, onUndo, onRedo, canUndo, canRedo, undoLabel, redoLabel, syncState }) {
   const titleMap = { dashboard: 'Dashboard', today: "Today's Tasks", all: 'All Tasks', calendar: 'Calendar', completed: 'Completed Tasks', pending: 'Pending Tasks', notes: 'Notes', summary: 'Summary', settings: 'Settings' };
   const [mobileSearch, setMobileSearch] = useState(false);
   return (
     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-line px-4 md:px-8 py-4 flex items-center justify-between gap-3">
       <div className="flex items-center gap-3 min-w-0">
-        <button onClick={onOpenMobile} className="md:hidden p-2 rounded-lg text-navy hover:bg-slate-100 shrink-0"><Icon name="menu" size={20} /></button>
+        {!appMode && <button onClick={onOpenMobile} className="md:hidden p-2 rounded-lg text-navy hover:bg-slate-100 shrink-0"><Icon name="menu" size={20} /></button>}
         <div className="min-w-0">
           <p className="font-display font-bold text-lg md:text-xl text-ink truncate">
             {view === 'dashboard' ? `${greetingWord()} 👋` : titleMap[view]}
@@ -1676,7 +1742,7 @@ function CalendarPage({ tasks, taskCounts, onOpenAdd, ...handlers }) {
   return (
     <div>
       <div className="bg-white border border-line rounded-2xl p-4 md:p-6 shadow-card mb-6">
-        <div className="flex items-center justify-between mb-5 gap-2">
+        <div className="tm-cal-head flex items-center justify-between mb-5 gap-2">
           <button onClick={goPrev} className="p-2 rounded-lg hover:bg-slate-100 text-slateText shrink-0"><Icon name="chevronLeft" size={18} /></button>
           <MonthYearJump vy={vy} vm={vm} setVy={setVy} setVm={setVm} size="lg" />
           <button onClick={goNext} className="p-2 rounded-lg hover:bg-slate-100 text-slateText shrink-0"><Icon name="chevronRight" size={18} /></button>
@@ -2144,7 +2210,7 @@ function UndoToast({ message, onDismiss }) {
   }, [message, onDismiss]);
   if (!message) return null;
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] animate-pop">
+    <div className="tm-undo-toast fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] animate-pop">
       <div className="flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-navy text-white shadow-pop">
         <Icon name="rotate" size={16} className="shrink-0" />
         <span className="text-sm font-medium">{message}</span>
@@ -2174,6 +2240,7 @@ function Workspace({ user, onLogout, onUpdateUser, onChangePassword, store, remo
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [appMode] = useState(detectAppMode);
   const [reminders, setReminders] = useState([]);
 
   const [addOpen, setAddOpen] = useState(false);
@@ -2322,11 +2389,11 @@ function Workspace({ user, onLogout, onUpdateUser, onChangePassword, store, remo
 
   return (
     <div className="flex h-screen overflow-hidden bg-bg font-body">
-      <Sidebar view={view} setView={setView} collapsed={collapsed} setCollapsed={setCollapsed} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} user={user} onLogout={onLogout} />
+      {!appMode && <Sidebar view={view} setView={setView} collapsed={collapsed} setCollapsed={setCollapsed} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} user={user} onLogout={onLogout} />}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header view={view} onOpenMobile={() => setMobileOpen(true)} searchQuery={searchQuery} setSearchQuery={setSearchQuery} tasks={tasks} reminders={reminders} user={user} onGoSettings={() => setView('settings')}
+        <Header appMode={appMode} view={view} onOpenMobile={() => setMobileOpen(true)} searchQuery={searchQuery} setSearchQuery={setSearchQuery} tasks={tasks} reminders={reminders} user={user} onGoSettings={() => setView('settings')}
           onUndo={doUndo} onRedo={doRedo} canUndo={canUndo} canRedo={canRedo} undoLabel={undoLabel} redoLabel={redoLabel} syncState={syncState} />
-        <main key={view} className="app-scroll tm-page flex-1 overflow-y-auto px-4 md:px-8 py-6">
+        <main key={view} className={`app-scroll tm-page flex-1 overflow-y-auto px-4 md:px-8 py-6${appMode ? ' tm-app-main' : ''}`}>
           {view === 'dashboard' && (
             <DashboardPage tasks={tasks} rangeFrom={dashRangeFrom} rangeTo={dashRangeTo}
               setRangeFrom={setDashRangeFrom} setRangeTo={setDashRangeTo}
@@ -2344,6 +2411,7 @@ function Workspace({ user, onLogout, onUpdateUser, onChangePassword, store, remo
           {view === 'settings' && <SettingsPage tasks={tasks} onClearAll={clearAll} user={user} onLogout={onLogout} onUpdateUser={onUpdateUser} onChangePassword={onChangePassword} />}
         </main>
       </div>
+      {appMode && <BottomNav view={view} setView={setView} />}
 
       <TaskFormModal open={addOpen} onClose={() => { setAddOpen(false); setEditingTask(null); }} onSubmit={submitTaskForm}
         initial={editingTask} defaultDate={addDefaultDate} taskCounts={taskCounts} />
