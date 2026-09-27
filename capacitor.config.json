@@ -1,0 +1,13 @@
+{
+  "appId": "com.niduslab.taskmanagement",
+  "appName": "Task Management",
+  "webDir": "public",
+  "server": {
+    "url": "https://task-management-indol-eta.vercel.app",
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

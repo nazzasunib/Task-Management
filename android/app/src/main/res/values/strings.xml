@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Task Management</string>
+    <string name="title_activity_main">Task Management</string>
+    <string name="package_name">com.niduslab.taskmanagement</string>
+    <string name="custom_url_scheme">com.niduslab.taskmanagement</string>
+</resources>
