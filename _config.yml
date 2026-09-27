@@ -1,0 +1,23 @@
+# GitHub Pages (Jekyll) settings ONLY — not used by Next.js / Vercel.
+# The old browser-only version in legacy/ must no longer be published,
+# because its accounts were separate from the real (Supabase) accounts.
+# Only index.html and 404.html (which move visitors to the live app) are served.
+exclude:
+  - legacy
+  - _archive
+  - android
+  - app
+  - components
+  - lib
+  - public
+  - supabase
+  - assets
+  - node_modules
+  - README.md
+  - package.json
+  - package-lock.json
+  - capacitor.config.json
+  - next.config.mjs
+  - postcss.config.mjs
+  - tailwind.config.js
+  - tsconfig.json

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<!--
+  GitHub Pages ONLY. This file is not used by the Next.js app on Vercel.
+  The old single-file version (legacy/index.html) kept accounts and tasks in
+  the browser's localStorage, separate from the real Supabase accounts.
+  This page retires it: people with no old data are sent straight to the
+  live app; people with old data can download a backup first (nothing is deleted).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Task Management has moved</title>
+<link rel="canonical" href="https://task-management-indol-eta.vercel.app/">
+<style>
+  :root { --navy:#0B1F3A; --purple:#7C3AED; --bg:#F8FAFC; --ink:#111827; --muted:#64748B; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+         background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; padding:16px; }
+  .card { background:#fff; max-width:440px; width:100%; border-radius:16px; padding:28px 24px;
+          box-shadow:0 10px 30px rgba(11,31,58,.08); text-align:center; }
+  h1 { color:var(--navy); font-size:20px; margin:0 0 10px; }
+  p { color:var(--muted); font-size:14px; line-height:1.55; margin:0 0 14px; }
+  .btn { display:block; width:100%; padding:12px 16px; border-radius:10px; font-size:15px; font-weight:600;
+         text-decoration:none; border:0; cursor:pointer; margin-top:10px; }
+  .primary { background:var(--purple); color:#fff; }
+  .secondary { background:#EEF2FF; color:var(--navy); }
+  #old { display:none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div id="moving">
+    <h1>Task Management has moved</h1>
+    <p>Taking you to the new version…</p>
+    <a class="btn primary" id="go1" href="https://task-management-indol-eta.vercel.app/">Open Task Management</a>
+  </div>
+  <div id="old">
+    <h1>Task Management has moved</h1>
+    <p>This old version kept your account and tasks only inside this browser. The new version keeps them safely in your cloud account, so they sync between the website and the Android app.</p>
+    <p><strong id="summary"></strong></p>
+    <p>Download a backup of your old data first, then continue and log in (or sign up) on the new version.</p>
+    <button class="btn secondary" id="dl" type="button">Download backup (.json)</button>
+    <a class="btn primary" id="go2" href="https://task-management-indol-eta.vercel.app/">Continue to new Task Management</a>
+  </div>
+</div>
+<script>
+(function () {
+  var NEW_URL = "https://task-management-indol-eta.vercel.app/";
+  var backup = null, taskCount = 0, noteCount = 0;
+  try {
+    var store = window.localStorage, users = [];
+    try { users = JSON.parse(store.getItem("momentum.users.v1") || "[]") || []; } catch (e) { users = []; }
+    var out = { exportedAt: new Date().toISOString(), source: "Task Management (old browser-only version)", users: [] };
+    for (var i = 0; i < users.length; i++) {
+      var u = users[i] || {}, tasks = [], notes = [];
+      try { tasks = JSON.parse(store.getItem("momentum.tasks." + u.id + ".v1") || "[]") || []; } catch (e) {}
+      try { notes = JSON.parse(store.getItem("momentum.notes." + u.id + ".v2") || "[]") || []; } catch (e) {}
+      taskCount += tasks.length; noteCount += notes.length;
+      // passwords are intentionally NOT included in the backup
+      out.users.push({ name: u.name || "", email: u.email || "", createdAt: u.createdAt || "", tasks: tasks, notes: notes });
+    }
+    if (taskCount + noteCount > 0) backup = out;
+  } catch (e) { backup = null; }
+
+  if (!backup) { window.location.replace(NEW_URL); return; }
+
+  document.getElementById("moving").style.display = "none";
+  document.getElementById("old").style.display = "block";
+  document.getElementById("summary").textContent =
+    "Found " + taskCount + " task" + (taskCount === 1 ? "" : "s") + " and " + noteCount + " note list" + (noteCount === 1 ? "" : "s") + " saved in this browser.";
+  document.getElementById("dl").addEventListener("click", function () {
+    var blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "task-management-old-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+})();
+</script>
+</body>
+</html>
