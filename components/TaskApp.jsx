@@ -2995,7 +2995,7 @@ function App() {
             <h1 className="font-display font-bold text-lg text-ink mb-1.5">Couldn't load your workspace</h1>
             <p className="text-sm text-slateText mb-5">{bootError}</p>
             <button onClick={() => window.location.reload()} className="w-full bg-purple hover:bg-purple/90 text-white text-sm font-semibold px-4 py-2.5 rounded-xl mb-2">Try again</button>
-            <button onClick={() => getSupabase().auth.signOut()} className="w-full border border-line text-ink text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-slate-50">Log out</button>
+            <button onClick={() => { getSupabase().auth.signOut().catch(() => {}).finally(() => window.location.reload()); }} className="w-full border border-line text-ink text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-slate-50">Log out</button>
           </div>
         </div>
       );

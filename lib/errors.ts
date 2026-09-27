@@ -35,6 +35,7 @@ export function friendlyError(err: unknown): string {
   if (/unable to validate email|invalid email|email address .* is invalid/i.test(msg)) return "Please enter a valid email address.";
   if (e && e.status === 429 || /rate limit|too many/i.test(msg)) return "Too many attempts. Please wait a minute and try again.";
   if (/jwt expired|refresh token|session.*(missing|expired)/i.test(msg)) return "Your session expired. Please log in again.";
+  if (/issued.*future|jwt issued at future/i.test(msg)) return "Your device's date & time is set incorrectly, so login can't be verified. Turn on automatic date & time in your phone's settings, then reopen the app.";
   if (code === "42501" || /row-level security|permission denied/i.test(msg)) return "You don't have permission to do that.";
   if (/failed to fetch|networkerror|network request failed|load failed|fetch failed/i.test(msg) || (typeof navigator !== "undefined" && navigator.onLine === false))
     return "Can't reach the server. Check your internet connection and try again.";
