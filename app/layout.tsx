@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Task Management — Daily Task Tracker",
   description: "Unfinished tasks roll forward automatically, due-time reminders keep you honest, and everything syncs across your devices.",
-  icons: { icon: "/favicon.png", apple: "/favicon.png" },
+  icons: { icon: "/favicon.png", apple: "/apple-touch-icon.png" },
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#0B1F3A" };
 

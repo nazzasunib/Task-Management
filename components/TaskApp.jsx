@@ -10,9 +10,7 @@ import { getSupabase, isConfigured, siteOrigin } from "@/lib/supabase";
 import { friendlyError } from "@/lib/errors";
 import { createStore } from "@/lib/store";
 
-const LOGO_WHITE_ICON = "/logo-icon-white.png";
-const LOGO_MAIN = "/logo-main.png";
-const LOGO_WHITE_HORIZ = "/logo-white.png";
+const LOGO_ICON = "/logo-icon.png";
 const safeGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const safeSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 
@@ -1098,7 +1096,10 @@ function AuthPage({ recovery = false, onRecovered }) {
         <div className="tm-blob absolute bottom-[-6rem] left-[-4rem] w-80 h-80 rounded-full bg-purpleLight/15 blur-3xl" style={{ animationDelay: '-4s' }} />
         <div className="tm-grid absolute inset-0 opacity-[0.08]" />
         <div className="relative tm-rise">
-          <img src={LOGO_WHITE_HORIZ} alt="Task Management logo" className="h-9 w-auto select-none pointer-events-none" draggable="false" />
+          <div className="flex items-center gap-3 select-none pointer-events-none">
+            <img src={LOGO_ICON} alt="Task Management logo" className="w-10 h-10" draggable="false" />
+            <span className="font-display font-bold text-lg text-white tracking-tight">Task Management</span>
+          </div>
         </div>
         <div className="relative flex justify-center py-10"><AuthVisual /></div>
         <div className="relative tm-rise" style={{ animationDelay: '.15s' }}>
@@ -1110,7 +1111,10 @@ function AuthPage({ recovery = false, onRecovered }) {
       <div className="flex-1 flex items-center justify-center p-6 md:p-10 relative">
         <div className="tm-grid-light absolute inset-0 pointer-events-none" />
         <div className="w-full max-w-sm relative tm-rise" key={mode}>
-          <img src={LOGO_MAIN} alt="Task Management logo" className="w-40 md:w-44 mb-6 select-none pointer-events-none" draggable="false" />
+          <div className="flex items-center gap-3 mb-6 select-none pointer-events-none">
+            <img src={LOGO_ICON} alt="Task Management logo" className="w-12 h-12" draggable="false" />
+            <span className="font-display font-bold text-xl text-navy tracking-tight">Task Management</span>
+          </div>
           <h1 className="font-display font-bold text-2xl text-ink mb-1">{titles[mode][0]}</h1>
           <p className="text-sm text-slateText mb-6">{titles[mode][1]}</p>
 
@@ -1183,8 +1187,11 @@ function Sidebar({ view, setView, collapsed, setCollapsed, mobileOpen, setMobile
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="flex items-center px-5 py-5 border-b border-white/10 h-[68px]">
           {collapsed
-            ? <img src={LOGO_WHITE_ICON} alt="Task Management" className="w-8 h-8 select-none pointer-events-none" draggable="false" />
-            : <img src={LOGO_WHITE_HORIZ} alt="Task Management logo" className="h-7 w-auto select-none pointer-events-none" draggable="false" />}
+            ? <img src={LOGO_ICON} alt="Task Management" className="w-9 h-9 select-none pointer-events-none" draggable="false" />
+            : <div className="flex items-center gap-2.5 select-none pointer-events-none">
+                <img src={LOGO_ICON} alt="Task Management logo" className="w-9 h-9" draggable="false" />
+                <span className="font-display font-bold text-[15px] text-white tracking-tight whitespace-nowrap">Task Management</span>
+              </div>}
         </div>
         <nav className="app-scroll flex-1 py-4 px-3 space-y-1 overflow-y-auto scrollbar-none">
           {NAV_ITEMS.map(item => {
@@ -2047,7 +2054,10 @@ function SettingsPage({ tasks, onClearAll, user, onLogout, onUpdateUser, onChang
         </div>
       </div>
       <div className="bg-white border border-line rounded-2xl p-5 shadow-card">
-        <img src={LOGO_MAIN} alt="Task Management logo" className="w-40 mb-4 select-none pointer-events-none" draggable="false" />
+        <div className="flex items-center gap-3 mb-4 select-none pointer-events-none">
+          <img src={LOGO_ICON} alt="Task Management logo" className="w-11 h-11" draggable="false" />
+          <span className="font-display font-bold text-lg text-navy tracking-tight">Task Management</span>
+        </div>
         <h3 className="font-display font-semibold text-ink mb-1">About</h3>
         <p className="text-sm text-slateText leading-relaxed">Task Management automatically carries unfinished tasks forward to the next day, so nothing quietly falls through the cracks. Tasks you schedule for a future date stay put until that day arrives.</p>
       </div>
@@ -2824,9 +2834,7 @@ function Splash({ label = 'Loading your workspace…' }) {
       <div className="flex flex-col items-center gap-5 tm-rise">
         <div className="relative w-20 h-20 flex items-center justify-center">
           <span className="tm-orbit absolute inset-0 rounded-[26px]" />
-          <div className="w-16 h-16 rounded-2xl tm-auth-panel flex items-center justify-center shadow-pop">
-            <img src={LOGO_WHITE_ICON} alt="" className="w-9 h-9" />
-          </div>
+          <img src={LOGO_ICON} alt="" className="w-16 h-16 rounded-2xl shadow-pop select-none pointer-events-none" draggable="false" />
         </div>
         <p className="text-sm font-medium text-slateText">{label}</p>
         <div className="w-36 h-1 rounded-full bg-slate-200 overflow-hidden"><span className="tm-bar block h-full w-2/5 rounded-full bg-gradient-to-r from-purple to-purpleLight" /></div>
@@ -2839,7 +2847,7 @@ function ConfigMissing() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg p-6">
       <div className="max-w-md w-full bg-white border border-line rounded-2xl shadow-card p-8 text-center">
-        <img src={LOGO_MAIN} alt="" className="w-36 mx-auto mb-5" />
+        <img src={LOGO_ICON} alt="" className="w-16 h-16 mx-auto mb-5" />
         <h1 className="font-display font-bold text-lg text-ink mb-2">Almost there</h1>
         <p className="text-sm text-slateText">Add <code>NEXT_PUBLIC_SUPABASE_URL</code> and <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> to your environment (Vercel → Settings → Environment Variables) and redeploy.</p>
       </div>
