@@ -136,6 +136,8 @@ function detectAppMode() {
   try { if (!on && (navigator.userAgent || '').indexOf('TaskManagementApp') >= 0) on = true; } catch (e) {}
   try { if (!on && window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) on = true; } catch (e) {}
   try { if (!on && localStorage.getItem('tm-app-mode') === '1') on = true; } catch (e) {}
+  // iPhone / browser "Add to Home Screen" launch
+  try { if (!on && (navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches)) on = true; } catch (e) {}
   if (on) root.classList.add('tm-app');
   return on;
 }
