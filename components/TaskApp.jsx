@@ -297,6 +297,81 @@ function statusLabel(t) {
   if (t.isRolledOver) return 'Rolled Over';
   return 'Pending';
 }
+/* ======================= FILE DOWNLOADS =======================
+   On the website a download is a normal browser download. The Android app shows
+   this site in a WebView, which silently ignores browser downloads — so there
+   the file goes to the app's native "Downloader" plugin
+   (android/.../DownloaderPlugin.java), which saves it to the phone's
+   Download/Task Management folder and can open it. */
+function isNativeAppShell() {
+  try { return !!(typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); } catch (e) { return false; }
+}
+function nativeDownloader() {
+  try {
+    const C = window.Capacitor;
+    return isNativeAppShell() && C.isPluginAvailable && C.isPluginAvailable('Downloader') ? C.Plugins.Downloader : null;
+  } catch (e) { return null; }
+}
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => { const s = String(r.result); resolve(s.slice(s.indexOf(',') + 1)); };
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+// small toast used only inside the app (above the bottom tab bar)
+function appNotice(message, tone, action) {
+  if (typeof document === 'undefined') return;
+  const old = document.getElementById('tm-app-notice');
+  if (old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'tm-app-notice';
+  el.className = 'tm-app-notice' + (tone === 'error' ? ' is-error' : '');
+  const text = document.createElement('span');
+  text.textContent = message;
+  el.appendChild(text);
+  if (action) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = action.label;
+    btn.onclick = () => action.run();
+    el.appendChild(btn);
+  }
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), action ? 7000 : 3500);
+}
+// Saves a file inside the Android app; returns false on the website (the caller
+// then does its normal browser download).
+async function saveFileInApp(blob, filename, mimeType) {
+  if (!isNativeAppShell()) return false;
+  const dl = nativeDownloader();
+  if (!dl) {
+    appNotice(`Please update the Task Management app to download files — get the new version at ${window.location.host}/download`, 'error');
+    return true;
+  }
+  const type = mimeType || blob.type || 'application/octet-stream';
+  appNotice(`Saving ${filename}…`);
+  try {
+    const res = await dl.save({ filename, data: await blobToBase64(blob), mimeType: type });
+    appNotice(`Saved to ${res.folder}: ${res.name}`, 'success', {
+      label: 'Open',
+      run: () => dl.open({ uri: res.uri, mimeType: type }).catch(err => appNotice((err && err.message) || "Couldn't open the file.", 'error')),
+    });
+  } catch (err) {
+    appNotice((err && err.message) || "Couldn't save the file. Please try again.", 'error');
+  }
+  return true;
+}
+async function saveUrlInApp(url, filename) {
+  try {
+    const blob = await (await fetch(url)).blob();
+    await saveFileInApp(blob, filename, blob.type);
+  } catch (err) {
+    appNotice("Couldn't download the file — check your internet connection.", 'error');
+  }
+}
+
 async function ensurePdfLibs() {
   if (typeof window !== 'undefined' && window.jspdf && window.jspdf.jsPDF && window.jspdf.__autotable) return;
   const { jsPDF } = await import('jspdf');
@@ -380,7 +455,8 @@ async function downloadSummaryPdf({ user, from, to, byDate, dates, total, comple
       }
     });
   }
-  doc.save(`task-summary_${from}_to_${to}.pdf`);
+  const pdfName = `task-summary_${from}_to_${to}.pdf`;
+  if (!(await saveFileInApp(doc.output('blob'), pdfName, 'application/pdf'))) doc.save(pdfName);
 }
 
 /* ======================= SMALL UI ATOMS ======================= */
@@ -953,6 +1029,7 @@ function TaskDetailsModal({ open, onClose, task, onToggle, onEdit, onDelete, onC
         {task.description && <p className="text-sm text-slateText mb-4 leading-relaxed">{task.description}</p>}
         {task.attachment && (
           <a href={task.attachment.dataUrl} download={task.attachment.name} target="_blank" rel="noreferrer"
+            onClick={e => { if (isNativeAppShell()) { e.preventDefault(); saveUrlInApp(task.attachment.dataUrl, task.attachment.name); } }}
             className="flex items-center gap-3 p-2.5 rounded-xl border border-line bg-bg mb-4 hover:border-purpleLight transition-colors">
             {task.attachment.type === 'image' ? (
               <img src={task.attachment.dataUrl} alt={task.attachment.name} className="w-12 h-12 rounded-lg object-cover shrink-0" />

@@ -124,3 +124,16 @@ html.tm-app .tm-cal-head > :not(button) * { min-width: 0; }
 html.tm-app header { padding-left: .9rem; padding-right: .75rem; gap: .5rem; }
 html.tm-app header .p-2\.5 { padding: .45rem; }
 html.tm-app header .gap-1\.5 { gap: .15rem; }
+
+/* Android app: "Saved to Download/Task Management … Open" notice (only created inside the app) */
+.tm-app-notice {
+  position: fixed; left: .75rem; right: .75rem; z-index: 70;
+  bottom: calc(6.25rem + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: .75rem;
+  padding: .75rem 1rem; border-radius: 1rem;
+  background: #0B1F3A; color: #fff; font-size: .875rem; font-weight: 500; line-height: 1.35;
+  box-shadow: 0 10px 30px rgba(11, 31, 58, .35);
+}
+.tm-app-notice.is-error { background: #b42318; }
+.tm-app-notice span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.tm-app-notice button { flex-shrink: 0; padding: .4rem .8rem; border-radius: .6rem; background: rgba(255, 255, 255, .16); color: #fff; font-weight: 600; }
