@@ -6,6 +6,7 @@
    - attachments go to private Supabase Storage
    - PDF libraries load only when a PDF is downloaded */
 import React, { useState, useEffect, useMemo, useRef, useCallback, Fragment } from "react";
+import { createPortal } from "react-dom";
 import { getSupabase, isConfigured, siteOrigin } from "@/lib/supabase";
 import { friendlyError } from "@/lib/errors";
 import { createStore } from "@/lib/store";
@@ -765,15 +766,19 @@ function TaskListSection({ title, tasks, dayKey, ...handlers }) {
 }
 
 /* ======================= MODALS ======================= */
+/* Rendered into <body> (a portal): the page wrapper has an entry animation that
+   uses transform, which turns "fixed" into "relative to the page" — so a modal
+   opened inside it was centred on the whole long page and appeared far down. */
 function ModalShell({ open, onClose, children, wide }) {
-  if (!open) return null;
-  return (
+  if (!open || typeof document === 'undefined') return null;
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/40 backdrop-blur-sm animate-fade" onMouseDown={onClose}>
       <div onMouseDown={e => e.stopPropagation()}
         className={`app-scroll w-full ${wide ? 'max-w-lg' : 'max-w-md'} max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-pop animate-pop`}>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 function Field({ label, children }) {
