@@ -696,6 +696,14 @@ function DateRangeSelector({ from, to, onFromChange, onToChange, taskCounts, onR
 }
 
 /* ======================= TASK CARD ======================= */
+// Completed tasks sink to the bottom of a list; everything else keeps its order
+// (a stable split, so the list's own sort — date, priority, … — still holds).
+function completedLast(list) {
+  const open = [], done = [];
+  list.forEach(t => (t.status === 'completed' ? done : open).push(t));
+  return done.length ? open.concat(done) : list;
+}
+
 function TaskCard({ task, onToggle, onEdit, onDelete, onOpen, dayKey }) {
   const done = task.status === 'completed';
   // For a long task, show which day of the run this card is standing on.
@@ -1488,7 +1496,7 @@ function Header({ appMode, view, onOpenMobile, searchQuery, setSearchQuery, task
 // Small history modal shared by every stat card below — clicking a card opens the
 // underlying task list so "Completed", "Pending", etc. are more than just a number.
 function StatHistoryModal({ open, onClose, title, tone, tasks }) {
-  const sorted = useMemo(() => [...tasks].sort((a, b) => b.currentDate.localeCompare(a.currentDate)), [tasks]);
+  const sorted = useMemo(() => completedLast([...tasks].sort((a, b) => b.currentDate.localeCompare(a.currentDate))), [tasks]);
   return (
     <ModalShell open={open} onClose={onClose} wide>
       <div className="p-6">
@@ -1624,7 +1632,7 @@ function applyFilterSort(tasks, { status, priority, date, sortBy, sortDir, query
     else if (sortBy === 'status') cmp = (a.status === 'completed' ? 2 : 1) - (b.status === 'completed' ? 2 : 1);
     return sortDir === 'asc' ? cmp : -cmp;
   });
-  return out;
+  return sortBy === 'status' ? out : completedLast(out);
 }
 
 /* ======================= PAGES ======================= */
@@ -1764,7 +1772,7 @@ function DashboardPage({ tasks, rangeFrom, rangeTo, setRangeFrom, setRangeTo, ta
                 </div>
               </div>
               <div className="space-y-2.5">
-                {g.list.map(t => <TaskCard key={t.id} task={t} dayKey={g.key} {...handlers} />)}
+                {completedLast(g.list).map(t => <TaskCard key={t.id} task={t} dayKey={g.key} {...handlers} />)}
               </div>
             </div>
           );
@@ -1871,7 +1879,7 @@ function CalendarPage({ tasks, taskCounts, onOpenAdd, ...handlers }) {
       {selectedTasks.length === 0 ? (
         <EmptyState icon="calendar" title="No tasks this day" subtitle="Add one, or pick another date on the calendar." />
       ) : (
-        <div className="space-y-2.5">{selectedTasks.map(t => <TaskCard key={t.id} task={t} dayKey={selected} {...handlers} />)}</div>
+        <div className="space-y-2.5">{completedLast(selectedTasks).map(t => <TaskCard key={t.id} task={t} dayKey={selected} {...handlers} />)}</div>
       )}
     </div>
   );
