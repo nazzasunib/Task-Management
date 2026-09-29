@@ -2533,6 +2533,10 @@ function makeNoteText(categoryId, title, description = '') {
   const now = new Date().toISOString();
   return { id: uid(), categoryId, title, kind: 'text', description, createdAt: now, updatedAt: now, items: [] };
 }
+function makeNoteFiles(categoryId, title = 'Files & Photos') {
+  const now = new Date().toISOString();
+  return { id: uid(), categoryId, title, kind: 'files', description: '', createdAt: now, updatedAt: now, items: [], files: [] };
+}
 function makeNoteCategory(name) {
   return { id: uid(), name, createdAt: new Date().toISOString(), tasks: [] };
 }
@@ -2542,9 +2546,10 @@ function sanitizeNoteCategories(raw) {
     ...c,
     tasks: Array.isArray(c.tasks) ? c.tasks.filter(t => t && typeof t === 'object' && typeof t.id === 'string').map(t => ({
       ...t,
-      kind: t.kind === 'text' ? 'text' : 'checklist',
+      kind: t.kind === 'text' || t.kind === 'files' ? t.kind : 'checklist',
       description: typeof t.description === 'string' ? t.description : '',
       items: Array.isArray(t.items) ? t.items.filter(i => i && typeof i === 'object' && typeof i.id === 'string') : [],
+      files: Array.isArray(t.files) ? t.files.filter(f => f && typeof f === 'object' && typeof f.id === 'string' && typeof f.path === 'string') : [],
     })) : [],
   }));
 }
@@ -2585,7 +2590,210 @@ function ChecklistRow({ item, onToggle, onEdit, onDelete }) {
   );
 }
 
-function NoteTaskCard({ task, onRename, onDelete, onDuplicate, onAddItem, onToggleItem, onEditItem, onDeleteItem, autoFocusItems }) {
+/* ======================= NOTES: FILES & PHOTOS =======================
+   Any note card (Checklist, Text, or a Files & Photos card) can hold files.
+   Each file is uploaded straight to private Supabase Storage (store.uploadNoteFile);
+   the card only keeps { id, name, type, size, path }. Links to view them are
+   short-lived signed URLs, fetched when a card is shown and cached here. */
+const NOTE_FILE_MAX = 3 * 1024 * 1024; // the storage bucket's per-file limit
+const SIGNED_TTL_MS = 6 * 24 * 60 * 60 * 1000; // links are signed for 7 days; refresh after 6
+const signedUrlCache = new Map(); // path -> { url, at }
+function useSignedUrls(store, paths) {
+  const key = paths.join('|');
+  const [, bump] = useState(0);
+  useEffect(() => {
+    const need = paths.filter(p => { const c = signedUrlCache.get(p); return !c || Date.now() - c.at > SIGNED_TTL_MS; });
+    if (!need.length || !store || !store.signPaths) return;
+    let alive = true;
+    store.signPaths(need).then(m => {
+      m.forEach((url, p) => signedUrlCache.set(p, { url, at: Date.now() }));
+      if (alive) bump(x => x + 1);
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [key, store]);
+  return p => (signedUrlCache.get(p) || {}).url || null;
+}
+const isImageMeta = f => /^image\//.test(f.type || '');
+function fmtBytes(n) {
+  if (!n) return '';
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+function dataUrlToFileBlob(dataUrl) {
+  const [head, body] = dataUrl.split(',');
+  const mime = (head.match(/data:([^;]+)/) || [])[1] || 'image/jpeg';
+  const bin = atob(body || '');
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+// Big phone photos are scaled down (longest side 2560px, JPEG) so they fit the 3 MB
+// limit; other files must already be under 3 MB.
+async function prepareNoteFile(file) {
+  const compressible = /^image\/(jpeg|png|webp|heic|heif)$/i.test(file.type || '');
+  if (compressible && file.size > 1.5 * 1024 * 1024) {
+    try {
+      const blob = dataUrlToFileBlob(await resizeImageFile(file, 2560));
+      if (blob.size <= NOTE_FILE_MAX) {
+        return { blob, name: file.name.replace(/\.[^.]+$/, '') + '.jpg', type: 'image/jpeg', size: blob.size };
+      }
+    } catch (e) { /* fall through to the size check below */ }
+  }
+  if (file.size > NOTE_FILE_MAX) throw new Error(`"${file.name}" is too large (max 3 MB).`);
+  return { blob: file, name: file.name || 'file', type: file.type || 'application/octet-stream', size: file.size };
+}
+// Opens a file: in the Android app it is saved to Downloads and can be opened from
+// there; in a browser it opens in a new tab (PDFs, images) or downloads.
+function openNoteFile(url, name) {
+  if (!url) return;
+  if (isNativeAppShell()) { saveUrlInApp(url, name); return; }
+  window.open(url, '_blank', 'noopener');
+}
+async function downloadNoteFile(url, name) {
+  if (!url) return;
+  if (isNativeAppShell()) { saveUrlInApp(url, name); return; }
+  try {
+    const blob = await (await fetch(url)).blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name || 'file';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  } catch (e) {
+    window.open(url, '_blank', 'noopener');
+  }
+}
+
+function NoteFileViewer({ file, url, onClose }) {
+  if (!file) return null;
+  return (
+    <ModalShell open onClose={onClose} wide>
+      <div className="p-4">
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <p className="text-sm font-semibold text-ink truncate min-w-0">{file.name}</p>
+          <IconButton icon="x" label="Close" onClick={onClose} />
+        </div>
+        {url ? <img src={url} alt={file.name} className="w-full max-h-[65vh] object-contain rounded-xl bg-slate-50" />
+          : <div className="h-48 rounded-xl bg-slate-100 animate-pulse" />}
+        <div className="flex justify-end gap-2 mt-3">
+          <button onClick={() => downloadNoteFile(url, file.name)} disabled={!url}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple text-white text-sm font-semibold hover:bg-purple/90 disabled:opacity-50 transition-colors">
+            <Icon name="download" size={14} />Download
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+// Thumbnails for photos, rows for other files, plus an "uploading" placeholder.
+function NoteFilesList({ files, store, busy, onRemove }) {
+  const urlFor = useSignedUrls(store, files.map(f => f.path));
+  const [viewing, setViewing] = useState(null);
+  const [confirmRemove, setConfirmRemove] = useState(null);
+  const images = files.filter(isImageMeta);
+  const others = files.filter(f => !isImageMeta(f));
+  if (!files.length && !busy) return null;
+  return (
+    <div className="mt-3 space-y-2">
+      {(images.length > 0 || busy > 0) && (
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {images.map(f => (
+            <div key={f.id} className="group/file relative aspect-square rounded-xl overflow-hidden border border-line bg-slate-50">
+              {urlFor(f.path)
+                ? <img src={urlFor(f.path)} alt={f.name} onClick={() => setViewing(f)} className="w-full h-full object-cover cursor-zoom-in" />
+                : <div className="w-full h-full animate-pulse bg-slate-100" />}
+              <button onClick={() => setConfirmRemove(f)} aria-label={`Remove ${f.name}`} title="Remove"
+                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-navy/70 text-white flex items-center justify-center hover:bg-rose-600 transition-colors">
+                <Icon name="x" size={12} />
+              </button>
+            </div>
+          ))}
+          {Array.from({ length: busy || 0 }).map((_, i) => (
+            <div key={'up' + i} className="aspect-square rounded-xl border border-dashed border-purpleLight bg-purple/5 flex flex-col items-center justify-center gap-1 text-[11px] text-purple">
+              <span className="w-4 h-4 rounded-full border-2 border-purple border-t-transparent animate-spin" />Uploading
+            </div>
+          ))}
+        </div>
+      )}
+      {others.map(f => (
+        <div key={f.id} className="flex items-center gap-2.5 p-2 rounded-xl border border-line bg-bg">
+          <button onClick={() => openNoteFile(urlFor(f.path), f.name)} className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
+            <IconBadge icon="fileText" tone="soft" size={34} iconSize={15} />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium text-ink truncate">{f.name}</span>
+              <span className="block text-[11px] text-slateText">{fmtBytes(f.size)}</span>
+            </span>
+          </button>
+          <IconButton icon="download" label="Download" onClick={() => downloadNoteFile(urlFor(f.path), f.name)} size={14} />
+          <IconButton icon="x" label="Remove" onClick={() => setConfirmRemove(f)} size={14} />
+        </div>
+      ))}
+      <NoteFileViewer file={viewing} url={viewing ? urlFor(viewing.path) : null} onClose={() => setViewing(null)} />
+      <ConfirmDialog open={!!confirmRemove} title="Remove this file?" message={confirmRemove ? `"${confirmRemove.name}" will be removed from this note.` : ''}
+        confirmLabel="Remove" danger onCancel={() => setConfirmRemove(null)} onConfirm={() => { onRemove(confirmRemove.id); setConfirmRemove(null); }} />
+    </div>
+  );
+}
+// Hidden multi-file picker + the paperclip button that opens it.
+function AttachButton({ onPick, label = 'Attach files or photos', size = 14 }) {
+  const ref = useRef(null);
+  return (
+    <>
+      <IconButton icon="paperclip" label={label} onClick={() => ref.current && ref.current.click()} size={size} />
+      <input ref={ref} type="file" multiple className="hidden"
+        onChange={e => { const list = Array.from(e.target.files || []); e.target.value = ''; if (list.length) onPick(list); }} />
+    </>
+  );
+}
+
+function NoteFilesCard({ note, store, busy, onRename, onPickFiles, onRemoveFile, onDelete, onDuplicate }) {
+  const [titleEditing, setTitleEditing] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(note.title);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const pickRef = useRef(null);
+  const commitTitle = () => {
+    const v = titleDraft.trim();
+    if (v) onRename(v); else setTitleDraft(note.title);
+    setTitleEditing(false);
+  };
+  const count = note.files.length;
+  return (
+    <div className="rounded-2xl border border-line bg-white p-5 shadow-card animate-pop transition-all duration-200 hover:shadow-pop hover:-translate-y-0.5">
+      <div className="flex items-center justify-between gap-2 mb-1">
+        {titleEditing ? (
+          <input autoFocus value={titleDraft} onChange={e => setTitleDraft(e.target.value)}
+            onBlur={commitTitle} onKeyDown={e => { if (e.key === 'Enter') commitTitle(); if (e.key === 'Escape') { setTitleDraft(note.title); setTitleEditing(false); } }}
+            placeholder="Files name" className="flex-1 font-display font-semibold text-[15px] px-2 py-1 rounded-lg border border-purple outline-none animate-pop" />
+        ) : (
+          <h3 onClick={() => setTitleEditing(true)} className="font-display font-semibold text-[15px] text-ink cursor-text flex items-center gap-1.5 min-w-0">
+            <Icon name="image" size={15} className="text-purple shrink-0" /><span className="truncate">{note.title}</span>
+          </h3>
+        )}
+        <div className="flex items-center gap-0.5 shrink-0">
+          {count > 0 && <span className="text-[11px] text-slateText mr-1.5">{count} file{count !== 1 ? 's' : ''}</span>}
+          <IconButton icon="edit" label="Rename" onClick={() => setTitleEditing(true)} size={14} />
+          <IconButton icon="copy" label="Duplicate" onClick={onDuplicate} size={14} />
+          <IconButton icon="trash" label="Delete" onClick={() => setConfirmDelete(true)} size={14} />
+        </div>
+      </div>
+      <NoteFilesList files={note.files} store={store} busy={busy} onRemove={onRemoveFile} />
+      <button onClick={() => pickRef.current && pickRef.current.click()}
+        className="mt-3 w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-line text-sm font-medium text-slateText hover:border-purpleLight hover:text-purple hover:bg-purple/5 transition-colors">
+        <Icon name="plus" size={15} />Add files or photos
+      </button>
+      <input ref={pickRef} type="file" multiple className="hidden"
+        onChange={e => { const list = Array.from(e.target.files || []); e.target.value = ''; if (list.length) onPickFiles(list); }} />
+      <p className="mt-1.5 text-[11px] text-slateText text-center">Photos, PDFs, documents — up to 3 MB each</p>
+      <ConfirmDialog open={confirmDelete} title="Delete this?" message={`"${note.title}" and its files will be permanently removed.`}
+        confirmLabel="Delete" danger onCancel={() => setConfirmDelete(false)} onConfirm={() => { onDelete(); setConfirmDelete(false); }} />
+    </div>
+  );
+}
+
+function NoteTaskCard({ task, onRename, onDelete, onDuplicate, onAddItem, onToggleItem, onEditItem, onDeleteItem, autoFocusItems, store, busy, onPickFiles, onRemoveFile }) {
   const [titleEditing, setTitleEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState(task.title);
   const [newItem, setNewItem] = useState('');
@@ -2626,6 +2834,7 @@ function NoteTaskCard({ task, onRename, onDelete, onDuplicate, onAddItem, onTogg
         )}
         <div className="flex items-center gap-0.5 shrink-0">
           {task.items.length > 0 && <span className="text-[11px] text-slateText mr-1.5">{done}/{task.items.length}</span>}
+          <AttachButton onPick={onPickFiles} />
           <IconButton icon="edit" label="Rename" onClick={() => setTitleEditing(true)} size={14} />
           <IconButton icon="copy" label="Duplicate" onClick={onDuplicate} size={14} />
           <IconButton icon="trash" label="Delete task" onClick={() => setConfirmDelete(true)} size={14} />
@@ -2647,6 +2856,7 @@ function NoteTaskCard({ task, onRename, onDelete, onDuplicate, onAddItem, onTogg
           placeholder="Add checklist item..." className={inputCls + ' text-sm py-2 transition-shadow'} />
         <button onClick={addItem} className="px-3 rounded-xl border border-line text-sm font-medium text-slateText hover:bg-slate-100 active:scale-95 transition-all shrink-0">Add</button>
       </div>
+      <NoteFilesList files={task.files || []} store={store} busy={busy} onRemove={onRemoveFile} />
 
       <ConfirmDialog open={confirmDelete} title="Delete this?" message={`"${hasTitle ? task.title : 'Checklist'}" and its items will be permanently removed.`}
         confirmLabel="Delete" danger onCancel={() => setConfirmDelete(false)} onConfirm={() => { onDelete(); setConfirmDelete(false); }} />
@@ -2654,7 +2864,7 @@ function NoteTaskCard({ task, onRename, onDelete, onDuplicate, onAddItem, onTogg
   );
 }
 
-function NoteTextCard({ note, onRename, onEditDescription, onDelete, onDuplicate }) {
+function NoteTextCard({ note, onRename, onEditDescription, onDelete, onDuplicate, store, busy, onPickFiles, onRemoveFile }) {
   const [titleEditing, setTitleEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState(note.title);
   const [descEditing, setDescEditing] = useState(false);
@@ -2683,6 +2893,7 @@ function NoteTextCard({ note, onRename, onEditDescription, onDelete, onDuplicate
           <h3 onClick={() => setTitleEditing(true)} className="font-display font-semibold text-[15px] text-ink cursor-text">{note.title}</h3>
         )}
         <div className="flex items-center gap-0.5 shrink-0">
+          <AttachButton onPick={onPickFiles} />
           <IconButton icon="edit" label="Rename" onClick={() => setTitleEditing(true)} size={14} />
           <IconButton icon="copy" label="Duplicate" onClick={onDuplicate} size={14} />
           <IconButton icon="trash" label="Delete" onClick={() => setConfirmDelete(true)} size={14} />
@@ -2699,6 +2910,7 @@ function NoteTextCard({ note, onRename, onEditDescription, onDelete, onDuplicate
       ) : (
         <p onClick={() => setDescEditing(true)} className="text-sm text-slateText italic cursor-text">Add a description...</p>
       )}
+      <NoteFilesList files={note.files || []} store={store} busy={busy} onRemove={onRemoveFile} />
 
       <ConfirmDialog open={confirmDelete} title="Delete this?" message={`"${note.title}" will be permanently removed.`}
         confirmLabel="Delete" danger onCancel={() => setConfirmDelete(false)} onConfirm={() => { onDelete(); setConfirmDelete(false); }} />
@@ -2746,7 +2958,8 @@ function NoteCategoryCard({ category, onOpen, onRename, onDelete }) {
   );
 }
 
-function NoteCategoryPage({ category, onBack, onUpdateTask, onDeleteTask, onDuplicateTask, onAddTask, onAddText }) {
+function NoteCategoryPage({ category, onBack, onUpdateTask, onDeleteTask, onDuplicateTask, onAddTask, onAddText, store, busy, onPickFiles, onRemoveFile, onAddFilesCard }) {
+  const filesPickRef = useRef(null);
   // addStage: 'idle' -> Task/Checklist/Text buttons | 'task' -> title input | 'text-name' -> name input | 'text-desc' -> description input
   const [addStage, setAddStage] = useState('idle');
   const [newTask, setNewTask] = useState('');
@@ -2792,19 +3005,25 @@ function NoteCategoryPage({ category, onBack, onUpdateTask, onDeleteTask, onDupl
         </div>
 
         {addStage === 'idle' && (
-          <div className="flex gap-2 shrink-0">
+          <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex sm:flex-wrap sm:justify-end">
             <button onClick={() => setAddStage('task')}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-line text-sm font-semibold text-ink transition-all hover:border-purpleLight hover:bg-purple/5 active:scale-95">
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-line text-sm font-semibold text-ink transition-all hover:border-purpleLight hover:bg-purple/5 active:scale-95">
               <Icon name="fileText" size={14} className="text-purple" />Task
             </button>
             <button onClick={addChecklistDirect}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-line text-sm font-semibold text-ink transition-all hover:border-purpleLight hover:bg-purple/5 active:scale-95">
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-line text-sm font-semibold text-ink transition-all hover:border-purpleLight hover:bg-purple/5 active:scale-95">
               <Icon name="checkSquare" size={14} className="text-purple" />Checklist
             </button>
             <button onClick={() => setAddStage('text-name')}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-line text-sm font-semibold text-ink transition-all hover:border-purpleLight hover:bg-purple/5 active:scale-95">
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-line text-sm font-semibold text-ink transition-all hover:border-purpleLight hover:bg-purple/5 active:scale-95">
               <Icon name="edit" size={14} className="text-purple" />Text Note
             </button>
+            <button onClick={() => filesPickRef.current && filesPickRef.current.click()}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-line text-sm font-semibold text-ink transition-all hover:border-purpleLight hover:bg-purple/5 active:scale-95">
+              <Icon name="paperclip" size={14} className="text-purple" />Files &amp; Photos
+            </button>
+            <input ref={filesPickRef} type="file" multiple className="hidden"
+              onChange={e => { const list = Array.from(e.target.files || []); e.target.value = ''; if (list.length) onAddFilesCard(list); }} />
           </div>
         )}
         {addStage === 'task' && (
@@ -2842,17 +3061,28 @@ function NoteCategoryPage({ category, onBack, onUpdateTask, onDeleteTask, onDupl
       </div>
 
       {category.tasks.length === 0 ? (
-        <EmptyState icon="checkSquare" title="Nothing here yet" subtitle="Add a Task, Checklist, or Text Note to start building this category's reusable steps." />
+        <EmptyState icon="checkSquare" title="Nothing here yet" subtitle="Add a Task, Checklist, Text Note, or Files & Photos to start building this category." />
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
-          {category.tasks.map(task => task.kind === 'text' ? (
-            <NoteTextCard key={task.id} note={task}
+          {category.tasks.map(task => task.kind === 'files' ? (
+            <NoteFilesCard key={task.id} note={task} store={store} busy={busy[task.id] || 0}
+              onRename={title => onUpdateTask(task.id, t => ({ ...t, title, updatedAt: new Date().toISOString() }))}
+              onPickFiles={list => onPickFiles(task.id, list)}
+              onRemoveFile={fileId => onRemoveFile(task.id, fileId)}
+              onDelete={() => onDeleteTask(task.id)}
+              onDuplicate={() => onDuplicateTask(task)} />
+          ) : task.kind === 'text' ? (
+            <NoteTextCard key={task.id} note={task} store={store} busy={busy[task.id] || 0}
+              onPickFiles={list => onPickFiles(task.id, list)}
+              onRemoveFile={fileId => onRemoveFile(task.id, fileId)}
               onRename={title => onUpdateTask(task.id, t => ({ ...t, title, updatedAt: new Date().toISOString() }))}
               onEditDescription={description => onUpdateTask(task.id, t => ({ ...t, description, updatedAt: new Date().toISOString() }))}
               onDelete={() => onDeleteTask(task.id)}
               onDuplicate={() => onDuplicateTask(task)} />
           ) : (
-            <NoteTaskCard key={task.id} task={task}
+            <NoteTaskCard key={task.id} task={task} store={store} busy={busy[task.id] || 0}
+              onPickFiles={list => onPickFiles(task.id, list)}
+              onRemoveFile={fileId => onRemoveFile(task.id, fileId)}
               autoFocusItems={task.id === autoFocusTaskId}
               onRename={title => onUpdateTask(task.id, t => ({ ...t, title, updatedAt: new Date().toISOString() }))}
               onDelete={() => onDeleteTask(task.id)}
@@ -2888,7 +3118,62 @@ function NotesPage({ user, store, remote, initial }) {
     setAddingCategory(false);
   };
   const renameCategory = (id, name) => setCategories(prev => prev.map(c => c.id === id ? { ...c, name } : c));
-  const deleteCategory = id => { setCategories(prev => prev.filter(c => c.id !== id)); setOpenCategoryId(prev => prev === id ? null : prev); };
+
+  // ---- files & photos on note cards ----
+  const [busy, setBusy] = useState({}); // card id -> uploads in progress
+  const categoriesRef = useRef(categories);
+  categoriesRef.current = categories;
+  // Remove storage objects no card points at any more (a duplicated card shares its files).
+  const cleanupFiles = paths => {
+    if (!paths.length || !store.removeFiles) return;
+    setTimeout(() => {
+      const inUse = new Set();
+      categoriesRef.current.forEach(c => c.tasks.forEach(t => (t.files || []).forEach(f => inUse.add(f.path))));
+      const orphans = [...new Set(paths)].filter(p => !inUse.has(p));
+      if (orphans.length) store.removeFiles(orphans).catch(() => {});
+    }, 1500);
+  };
+  const filePathsOf = tasks => tasks.flatMap(t => (t.files || []).map(f => f.path));
+  const attachFiles = async (categoryId, cardId, fileList) => {
+    if (!store.uploadNoteFile) return;
+    setBusy(b => ({ ...b, [cardId]: (b[cardId] || 0) + fileList.length }));
+    let failed = 0;
+    for (const file of fileList) {
+      try {
+        const prepared = await prepareNoteFile(file);
+        const path = await store.uploadNoteFile(prepared.blob, prepared.name, cardId);
+        const meta = { id: uid(), name: prepared.name, type: prepared.type, size: prepared.size, path, addedAt: new Date().toISOString() };
+        setCategories(prev => prev.map(c => c.id === categoryId
+          ? { ...c, tasks: c.tasks.map(t => t.id === cardId ? { ...t, files: [...(t.files || []), meta], updatedAt: new Date().toISOString() } : t) } : c));
+      } catch (e) {
+        failed++;
+        appNotice((e && e.message && /too large/.test(e.message)) ? e.message : `Couldn't upload "${file.name}" — check your internet connection.`, 'error');
+      } finally {
+        setBusy(b => ({ ...b, [cardId]: Math.max(0, (b[cardId] || 1) - 1) }));
+      }
+    }
+    if (!failed) appNotice(fileList.length === 1 ? 'File added' : `${fileList.length} files added`, 'success');
+  };
+  const removeFile = (categoryId, cardId, fileId) => {
+    const cat = categoriesRef.current.find(c => c.id === categoryId);
+    const card = cat && cat.tasks.find(t => t.id === cardId);
+    const removed = card ? (card.files || []).filter(f => f.id === fileId).map(f => f.path) : [];
+    setCategories(prev => prev.map(c => c.id === categoryId
+      ? { ...c, tasks: c.tasks.map(t => t.id === cardId ? { ...t, files: (t.files || []).filter(f => f.id !== fileId), updatedAt: new Date().toISOString() } : t) } : c));
+    cleanupFiles(removed);
+  };
+  const addFilesCard = (categoryId, fileList) => {
+    const card = makeNoteFiles(categoryId, fileList.length === 1 && /^image\//.test(fileList[0].type || '') ? 'Photo' : 'Files & Photos');
+    setCategories(prev => prev.map(c => c.id === categoryId ? { ...c, tasks: [...c.tasks, card] } : c));
+    attachFiles(categoryId, card.id, fileList);
+  };
+
+  const deleteCategory = id => {
+    const cat = categoriesRef.current.find(c => c.id === id);
+    setCategories(prev => prev.filter(c => c.id !== id));
+    setOpenCategoryId(prev => prev === id ? null : prev);
+    if (cat) cleanupFiles(filePathsOf(cat.tasks));
+  };
 
   const addTask = (categoryId, title) => {
     const task = makeNoteTask(categoryId, title);
@@ -2902,12 +3187,20 @@ function NotesPage({ user, store, remote, initial }) {
   };
   const updateTask = (categoryId, taskId, updater) => setCategories(prev => prev.map(c => c.id === categoryId
     ? { ...c, tasks: c.tasks.map(t => t.id === taskId ? updater(t) : t) } : c));
-  const deleteTask = (categoryId, taskId) => setCategories(prev => prev.map(c => c.id === categoryId ? { ...c, tasks: c.tasks.filter(t => t.id !== taskId) } : c));
+  const deleteTask = (categoryId, taskId) => {
+    const cat = categoriesRef.current.find(c => c.id === categoryId);
+    const card = cat && cat.tasks.find(t => t.id === taskId);
+    setCategories(prev => prev.map(c => c.id === categoryId ? { ...c, tasks: c.tasks.filter(t => t.id !== taskId) } : c));
+    if (card) cleanupFiles(filePathsOf([card]));
+  };
   const duplicateTask = (categoryId, task) => {
     const baseTitle = task.title && task.title.trim() ? task.title : 'Checklist';
-    const copy = task.kind === 'text'
+    const copy = task.kind === 'files'
+      ? makeNoteFiles(categoryId, `${baseTitle} (Copy)`)
+      : task.kind === 'text'
       ? makeNoteText(categoryId, `${baseTitle} (Copy)`, task.description)
       : makeNoteTask(categoryId, `${baseTitle} (Copy)`, task.items.map(i => ({ ...i, id: uid(), completed: false })));
+    copy.files = (task.files || []).map(f => ({ ...f, id: uid() })); // same stored files, shared
     setCategories(prev => prev.map(c => c.id === categoryId ? { ...c, tasks: [...c.tasks, copy] } : c));
   };
 
@@ -2920,7 +3213,11 @@ function NotesPage({ user, store, remote, initial }) {
         onAddText={(title, description) => addText(openCategory.id, title, description)}
         onUpdateTask={(taskId, updater) => updateTask(openCategory.id, taskId, updater)}
         onDeleteTask={taskId => deleteTask(openCategory.id, taskId)}
-        onDuplicateTask={task => duplicateTask(openCategory.id, task)} />
+        onDuplicateTask={task => duplicateTask(openCategory.id, task)}
+        store={store} busy={busy}
+        onPickFiles={(cardId, list) => attachFiles(openCategory.id, cardId, list)}
+        onRemoveFile={(cardId, fileId) => removeFile(openCategory.id, cardId, fileId)}
+        onAddFilesCard={list => addFilesCard(openCategory.id, list)} />
     );
   }
 
