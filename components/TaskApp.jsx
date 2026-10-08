@@ -10,6 +10,7 @@ import { createPortal } from "react-dom";
 import { getSupabase, isConfigured, siteOrigin } from "@/lib/supabase";
 import { friendlyError } from "@/lib/errors";
 import { createStore } from "@/lib/store";
+import { saveOfflineUser, readOfflineUser, clearOfflineData, isOfflineError, registerServiceWorker } from "@/lib/offline";
 
 const LOGO_ICON = "/logo-icon.png";
 const safeGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -1442,8 +1443,8 @@ function SyncPill({ state }) {
   };
   const m = map[state] || map.idle;
   return (
-    <span title={m.t} className={`hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full text-[11px] font-semibold transition-colors ${m.c}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${m.d}`} />{m.t}
+    <span title={state === 'offline' ? 'Offline — changes are saved on this device and sync when you are back online' : m.t} className={`${state === 'offline' || state === 'error' ? 'inline-flex' : 'hidden sm:inline-flex'} items-center gap-1.5 h-8 px-2.5 rounded-full text-[11px] font-semibold transition-colors ${m.c}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${m.d}`} />{m.t}{state === 'offline' ? ' · saved on device' : ''}
     </span>
   );
 }
@@ -3335,14 +3336,27 @@ function App() {
         onState: setSyncState,
         onError: () => {},
       });
-      const [profileRes, loaded] = await Promise.all([
-        sb.from('tm_profiles').select('full_name,email,about,avatar_url,seeded,created_at').eq('id', authUser.id).maybeSingle(),
-        store.load(),
-      ]);
-      if (profileRes.error) throw profileRes.error;
-      const p = profileRes.data || {};
+      const fetchProfile = async () => {
+        const saved = readOfflineUser();
+        const haveSaved = saved && saved.id === authUser.id;
+        try {
+          if (haveSaved && navigator.onLine === false) { const e = new Error('Offline'); e.offline = true; throw e; }
+          const query = sb.from('tm_profiles').select('full_name,email,about,avatar_url,seeded,created_at').eq('id', authUser.id).maybeSingle();
+          const r = await (haveSaved ? Promise.race([query, new Promise((_, rej) => setTimeout(() => { const e = new Error('timeout'); e.offline = true; rej(e); }, 8000))]) : query);
+          if (r.error) throw r.error;
+          return { data: r.data || {}, online: true };
+        } catch (e) {
+          // no internet: use the profile remembered on this device
+          const saved = readOfflineUser();
+          if (isOfflineError(e) && saved && saved.id === authUser.id) return { data: saved.profile || {}, online: false };
+          throw e;
+        }
+      };
+      const [profileRes, loaded] = await Promise.all([fetchProfile(), store.load()]);
+      const p = profileRes.data;
       let tasks = loaded.tasks;
-      if (!p.seeded) {
+      if (profileRes.online) saveOfflineUser(authUser, p);
+      if (profileRes.online && !p.seeded) {
         // New accounts start empty — no demo/welcome tasks.
         await sb.from('tm_profiles').upsert({ id: authUser.id, seeded: true, full_name: p.full_name || authUser.user_metadata?.full_name || (authUser.email || '').split('@')[0], email: authUser.email || '' });
       }
@@ -3369,22 +3383,41 @@ function App() {
     if (!isConfigured) return;
     const sb = getSupabase();
     let recovering = typeof window !== 'undefined' && /type=recovery/.test(window.location.hash);
-    sb.auth.getSession().then(({ data: { session } }) => {
-      if (recovering) return;
-      if (session) boot(session.user); else setPhase('auth');
-    });
+    // Opened with no internet (or a connection so bad the saved login can't be refreshed):
+    // keep the person inside the app using the copy stored on this device.
+    const saved = readOfflineUser();
+    const bootOffline = () => boot({ id: saved.id, email: saved.email, user_metadata: saved.user_metadata || {} });
+    let settled = false;
+    const offlineNow = typeof navigator !== 'undefined' && navigator.onLine === false;
+    if (saved && offlineNow && !recovering) {
+      settled = true; bootOffline();
+    } else {
+      const slow = saved ? setTimeout(() => { if (!settled && !recovering) { settled = true; bootOffline(); } }, 7000) : null;
+      sb.auth.getSession().then(({ data: { session }, error }) => {
+        if (slow) clearTimeout(slow);
+        if (settled || recovering) return;
+        settled = true;
+        if (session) { boot(session.user); return; }
+        if (saved && error) bootOffline(); else setPhase('auth');
+      });
+    }
     const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') { recovering = true; setPhase('recovery'); return; }
       if (event === 'SIGNED_OUT') {
         bootedFor.current = null;
         if (storeRef.current) { storeRef.current.destroy(); storeRef.current = null; }
+        clearOfflineData();
         setUser(null); setData(null); setPhase('auth');
         return;
       }
+      if (event === 'TOKEN_REFRESHED') { storeRef.current && storeRef.current.refreshAll(); return; }
       if (event === 'SIGNED_IN' && session && !recovering) setTimeout(() => boot(session.user), 0);
     });
     return () => sub.subscription.unsubscribe();
   }, [boot]);
+
+  // let the website and the app open with no internet
+  useEffect(() => { registerServiceWorker(); }, []);
 
   // catch up when the tab / phone comes back
   useEffect(() => {
@@ -3396,7 +3429,8 @@ function App() {
       storeRef.current && storeRef.current.refreshAll();
     };
     const poll = setInterval(() => { if (document.visibilityState === 'visible') { last = Date.now(); storeRef.current && storeRef.current.refreshAll(); } }, 60000);
-    const beforeUnload = (e) => { if (storeRef.current && storeRef.current.hasChanges()) { storeRef.current.flushNow(); e.preventDefault(); e.returnValue = ''; } };
+    // offline edits are kept on the device, so only warn when they could really be lost
+    const beforeUnload = (e) => { if (storeRef.current && storeRef.current.hasChanges() && navigator.onLine !== false) { storeRef.current.flushNow(); e.preventDefault(); e.returnValue = ''; } };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', onVisible);
     window.addEventListener('online', onVisible);
@@ -3412,7 +3446,13 @@ function App() {
 
   const handleLogout = useCallback(async () => {
     try { if (storeRef.current) await storeRef.current.flushNow(); } catch (e) {}
-    await getSupabase().auth.signOut();
+    if (storeRef.current && storeRef.current.hasChanges()) {
+      const ok = window.confirm("Some changes have not been sent to the server yet (you may be offline). If you log out now they will be lost. Log out anyway?");
+      if (!ok) return;
+    }
+    const sb = getSupabase();
+    const res = await sb.auth.signOut();
+    if (res && res.error) await sb.auth.signOut({ scope: 'local' });
   }, []);
 
   const handleUpdateUser = useCallback(async (patch) => {
