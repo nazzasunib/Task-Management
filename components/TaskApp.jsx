@@ -2196,7 +2196,7 @@ function ReminderSettingsCard({ user, onUpdateUser }) {
   const [rs, setRs] = useState(getReminderStatus());
   const [testMsg, setTestMsg] = useState('');
   useEffect(() => { const t = setInterval(() => setRs(getReminderStatus()), 3000); return () => clearInterval(t); }, []);
-  const sendTest = async () => { setTestMsg(''); try { setTestMsg(await sendTestReminder()); } catch (e) { setTestMsg(e.message || 'Could not send the test.'); } };
+  const sendTest = async () => { setTestMsg('Testing…'); try { setTestMsg(await sendTestReminder()); } catch (e) { setTestMsg(e.message || 'Could not send the test.'); } setRs(getReminderStatus()); };
   const openExact = async () => { setTestMsg(''); try { await openExactAlarmSettings(); } catch (e) { setTestMsg('Could not open the phone settings.'); } };
 
   const save = async () => {
@@ -2266,6 +2266,11 @@ function ReminderSettingsCard({ user, onUpdateUser }) {
             <p>Exact alarms: <b>{rs.exact}</b>{rs.exact !== 'granted' && ' (reminders still come, but may be a few minutes late)'}</p>
             <p>Scheduled on phone: <b>{rs.scheduled}</b> · updated {new Date(rs.at).toLocaleString()}</p>
             {rs.error && <p className="text-rose-600">Error: {rs.error}</p>}
+            {rs.steps && rs.steps.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-line text-xs text-slateText">
+                {rs.steps.map((t, i) => <p key={i}>{t}</p>)}
+              </div>
+            )}
           </div>
         )}
         <div className="flex flex-wrap gap-2 mt-3">
