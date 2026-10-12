@@ -11,7 +11,7 @@ import { getSupabase, isConfigured, siteOrigin } from "@/lib/supabase";
 import { friendlyError } from "@/lib/errors";
 import { createStore } from "@/lib/store";
 import { saveOfflineUser, readOfflineUser, clearOfflineData, isOfflineError, registerServiceWorker } from "@/lib/offline";
-import { syncReminders, startWebReminders, normalizeSettings } from "@/lib/reminders";
+import { syncReminders, startWebReminders, normalizeSettings, sendTestReminder, openExactAlarmSettings, getReminderStatus, isNativeApp } from "@/lib/reminders";
 
 const LOGO_ICON = "/logo-icon.png";
 const safeGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -2192,6 +2192,12 @@ function ReminderSettingsCard({ user, onUpdateUser }) {
   const set = (k, v) => setS(prev => ({ ...prev, [k]: v }));
   const canNotify = typeof window !== 'undefined' && 'Notification' in window;
   const [perm, setPerm] = useState(canNotify ? Notification.permission : 'unsupported');
+  const native = isNativeApp();
+  const [rs, setRs] = useState(getReminderStatus());
+  const [testMsg, setTestMsg] = useState('');
+  useEffect(() => { const t = setInterval(() => setRs(getReminderStatus()), 3000); return () => clearInterval(t); }, []);
+  const sendTest = async () => { setTestMsg(''); try { setTestMsg(await sendTestReminder()); } catch (e) { setTestMsg(e.message || 'Could not send the test.'); } };
+  const openExact = async () => { setTestMsg(''); try { await openExactAlarmSettings(); } catch (e) { setTestMsg('Could not open the phone settings.'); } };
 
   const save = async () => {
     setErr(''); setMsg('');
@@ -2250,6 +2256,28 @@ function ReminderSettingsCard({ user, onUpdateUser }) {
           {perm === 'denied' && <span className="text-xs text-slateText">Blocked in browser settings.</span>}
         </div>
       )}
+      <div className="mt-5 p-4 rounded-xl bg-bg border border-line text-sm text-ink">
+        <p className="font-semibold mb-2">Phone reminder status</p>
+        {!native && <p className="text-slateText">Phone notifications work only in the Android app.</p>}
+        {native && !rs && <p className="text-slateText">Not synced yet. Add a task with a time, then wait a moment.</p>}
+        {native && rs && (
+          <div className="space-y-1">
+            <p>Notifications permission: <b>{rs.permission}</b></p>
+            <p>Exact alarms: <b>{rs.exact}</b>{rs.exact !== 'granted' && ' (reminders still come, but may be a few minutes late)'}</p>
+            <p>Scheduled on phone: <b>{rs.scheduled}</b> · updated {new Date(rs.at).toLocaleString()}</p>
+            {rs.error && <p className="text-rose-600">Error: {rs.error}</p>}
+          </div>
+        )}
+        <div className="flex flex-wrap gap-2 mt-3">
+          {native && (
+            <button onClick={sendTest} className="text-sm font-medium px-3.5 py-2 rounded-xl border border-line text-ink hover:bg-slate-50">Send test notification</button>
+          )}
+          {native && rs && rs.exact !== 'granted' && (
+            <button onClick={openExact} className="text-sm font-medium px-3.5 py-2 rounded-xl border border-line text-ink hover:bg-slate-50">Allow exact alarms</button>
+          )}
+        </div>
+        {testMsg && <p className="mt-2 text-slateText">{testMsg}</p>}
+      </div>
       {err && <p className="text-sm text-rose-600 mt-3">{err}</p>}
       {msg && <p className="text-sm text-emerald-700 mt-3">{msg}</p>}
       <div className="flex justify-end mt-4">
