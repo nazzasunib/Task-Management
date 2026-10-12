@@ -11,6 +11,7 @@ import { getSupabase, isConfigured, siteOrigin } from "@/lib/supabase";
 import { friendlyError } from "@/lib/errors";
 import { createStore } from "@/lib/store";
 import { saveOfflineUser, readOfflineUser, clearOfflineData, isOfflineError, registerServiceWorker } from "@/lib/offline";
+import { syncReminders, startWebReminders, normalizeSettings } from "@/lib/reminders";
 
 const LOGO_ICON = "/logo-icon.png";
 const safeGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -2180,6 +2181,86 @@ function SummaryPage({ tasks, user }) {
   );
 }
 
+function ReminderSettingsCard({ user, onUpdateUser }) {
+  const init = normalizeSettings(user.reminders);
+  const [s, setS] = useState(init);
+  const [meet, setMeet] = useState(init.meetingLeadMinutes.join(', '));
+  const [sums, setSums] = useState(init.summaryTimes.join(', '));
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const [saving, setSaving] = useState(false);
+  const set = (k, v) => setS(prev => ({ ...prev, [k]: v }));
+  const canNotify = typeof window !== 'undefined' && 'Notification' in window;
+  const [perm, setPerm] = useState(canNotify ? Notification.permission : 'unsupported');
+
+  const save = async () => {
+    setErr(''); setMsg('');
+    const meetingLeadMinutes = meet.split(',').map(x => x.trim()).filter(Boolean).map(Number);
+    if (meetingLeadMinutes.some(n => !Number.isFinite(n) || n < 0)) { setErr('Meeting reminders must be numbers of minutes, like 20, 2.'); return; }
+    const summaryTimes = sums.split(',').map(x => x.trim()).filter(Boolean);
+    if (summaryTimes.some(x => !/^\d{2}:\d{2}$/.test(x))) { setErr('Summary times must look like 09:00, 14:30.'); return; }
+    const next = normalizeSettings({ ...s, meetingLeadMinutes, summaryTimes });
+    setSaving(true);
+    try {
+      await onUpdateUser({ reminders: next });
+      setS(next);
+      setMsg('Saved. The same times apply in the app and on the website.');
+    } catch (e) { setErr(friendlyError(e)); }
+    setSaving(false);
+  };
+  const allow = async () => { try { setPerm(await Notification.requestPermission()); } catch (e) {} };
+
+  return (
+    <div className="bg-white border border-line rounded-2xl p-5 shadow-card">
+      <h3 className="font-display font-semibold text-ink mb-1">Reminders</h3>
+      <p className="text-sm text-slateText mb-4">
+        In the Android app these arrive on your phone even when the app is closed or you are offline.
+        On the website they appear while the page is open.
+      </p>
+      <label className="flex items-center gap-2 text-sm text-ink mb-4">
+        <input type="checkbox" checked={s.enabled} onChange={e => set('enabled', e.target.checked)} /> Reminders on
+      </label>
+      <div className="grid sm:grid-cols-2 gap-4">
+        <Field label="Task reminder before due time (min)">
+          <input type="number" min="0" className={inputCls} value={s.taskLeadMinutes} onChange={e => set('taskLeadMinutes', Number(e.target.value))} />
+        </Field>
+        <Field label="Meeting reminders before (min, comma)">
+          <input className={inputCls} value={meet} onChange={e => setMeet(e.target.value)} placeholder="20, 2" />
+        </Field>
+        <Field label="Daily task list times (comma)">
+          <input className={inputCls} value={sums} onChange={e => setSums(e.target.value)} placeholder="09:00, 14:30, 17:00" />
+        </Field>
+        <Field label="Last-day reminder (min before midnight)">
+          <input type="number" min="0" className={inputCls} value={s.endOfDayLeadMinutes} onChange={e => set('endOfDayLeadMinutes', Number(e.target.value))} />
+        </Field>
+        <Field label="Overdue (unfinished) reminder time">
+          <input type="time" className={inputCls} value={s.overdueTime} onChange={e => set('overdueTime', e.target.value)} />
+        </Field>
+        <Field label="Multi-day task reminder time">
+          <input type="time" className={inputCls} value={s.longTaskTime} onChange={e => set('longTaskTime', e.target.value)} />
+        </Field>
+      </div>
+      <label className="flex items-center gap-2 text-sm text-ink mt-4">
+        <input type="checkbox" checked={s.skipTimedInSummary} onChange={e => set('skipTimedInSummary', e.target.checked)} />
+        Keep tasks with a set time out of the daily list
+      </label>
+      {canNotify && perm !== 'granted' && (
+        <div className="mt-4 flex items-center gap-3">
+          <button onClick={allow} className="text-sm font-medium px-3.5 py-2 rounded-xl border border-line text-ink hover:bg-slate-50">Allow notifications on this browser</button>
+          {perm === 'denied' && <span className="text-xs text-slateText">Blocked in browser settings.</span>}
+        </div>
+      )}
+      {err && <p className="text-sm text-rose-600 mt-3">{err}</p>}
+      {msg && <p className="text-sm text-emerald-700 mt-3">{msg}</p>}
+      <div className="flex justify-end mt-4">
+        <button onClick={save} disabled={saving} className="text-sm font-semibold px-4 py-2.5 rounded-xl bg-purple text-white hover:bg-purple/90 disabled:opacity-60">
+          {saving ? 'Saving…' : 'Save Reminders'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SettingsPage({ tasks, onClearAll, user, onLogout, onUpdateUser, onChangePassword }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const total = tasks.length;
@@ -2187,6 +2268,7 @@ function SettingsPage({ tasks, onClearAll, user, onLogout, onUpdateUser, onChang
   return (
     <div className="max-w-2xl space-y-5">
       <ProfileCard user={user} onUpdateUser={onUpdateUser} />
+      <ReminderSettingsCard user={user} onUpdateUser={onUpdateUser} />
       <ChangePasswordCard user={user} onChangePassword={onChangePassword} />
       <div className="bg-white border border-line rounded-2xl p-5 shadow-card">
         <h3 className="font-display font-semibold text-ink mb-1">Appearance</h3>
@@ -2356,6 +2438,13 @@ function Workspace({ user, onLogout, onUpdateUser, onChangePassword, store, remo
 
   useEffect(() => { store.persist('tasks', tasks); }, [tasks, store]);
 
+  // phone reminders (Android app): re-schedule whenever the task list changes
+  useEffect(() => { syncReminders(tasks, user.reminders); }, [tasks, user.reminders]);
+  // website: keep the latest tasks + settings for the reminder timer
+  const reminderState = useRef({ tasks: [], settings: null });
+  useEffect(() => { reminderState.current = { tasks, settings: user.reminders }; }, [tasks, user.reminders]);
+  useEffect(() => startWebReminders(() => reminderState.current), []);
+
   // ask permission once, then poll for tasks whose due time is coming up in the next 15 minutes
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -2378,9 +2467,6 @@ function Workspace({ user, onLogout, onUpdateUser, onChangePassword, store, remo
           notified.add(t.id); changed = true;
           const text = `"${t.title}" is due at ${fmtTime(t.dueTime)}.`;
           fresh.push({ id: t.id, text });
-          if ('Notification' in window && Notification.permission === 'granted') {
-            try { new Notification('Task due soon', { body: text }); } catch (e) {}
-          }
         }
       });
       if (changed) saveNotified(user.id, notified);
@@ -3344,7 +3430,12 @@ function App() {
           const query = sb.from('tm_profiles').select('full_name,email,about,avatar_url,seeded,created_at').eq('id', authUser.id).maybeSingle();
           const r = await (haveSaved ? Promise.race([query, new Promise((_, rej) => setTimeout(() => { const e = new Error('timeout'); e.offline = true; rej(e); }, 8000))]) : query);
           if (r.error) throw r.error;
-          return { data: r.data || {}, online: true };
+          const data = r.data || {};
+          try {
+            const rs = await sb.from('tm_profiles').select('reminder_settings').eq('id', authUser.id).maybeSingle();
+            if (!rs.error && rs.data) data.reminder_settings = rs.data.reminder_settings;
+          } catch (e) { /* column not added yet — defaults are used */ }
+          return { data, online: true };
         } catch (e) {
           // no internet: use the profile remembered on this device
           const saved = readOfflineUser();
@@ -3368,6 +3459,7 @@ function App() {
         about: p.about || '',
         avatar: p.avatar_url || null,
         createdAt: p.created_at,
+        reminders: p.reminder_settings || null,
       });
       setData({ tasks, notes: loaded.notes });
       setPhase('ready');
@@ -3461,6 +3553,7 @@ function App() {
     if ('name' in patch) row.full_name = patch.name;
     if ('about' in patch) row.about = patch.about;
     if ('avatar' in patch) row.avatar_url = patch.avatar;
+    if ('reminders' in patch) row.reminder_settings = patch.reminders;
     let message = null;
     if (Object.keys(row).length) {
       const { error } = await sb.from('tm_profiles').update(row).eq('id', user.id);

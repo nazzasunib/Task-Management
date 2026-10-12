@@ -25,6 +25,7 @@ export function friendlyError(err: unknown): string {
   for (const key of Object.keys(RPC_MESSAGES)) {
     if (msg === key || msg.includes(key) || code === key) return RPC_MESSAGES[key];
   }
+  if (code === "42703" || /reminder_settings/.test(msg)) return "Database update needed. Run supabase/migrations/0002_reminder_settings.sql in Supabase → SQL Editor, then try again.";
   if (code === "PGRST202" || code === "PGRST205" || code === "42P01" || code === "42883" || /could not find the (function|table)|schema cache|does not exist/i.test(msg))
     return "Database setup isn't finished. Run supabase/migrations/0001_task_management.sql in Supabase → SQL Editor, then try again.";
   if (/invalid login credentials/i.test(msg)) return "Wrong email or password.";
