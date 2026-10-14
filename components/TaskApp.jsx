@@ -19,6 +19,9 @@ const safeSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 
 /* ======================= ICONS ======================= */
 const ICON_PATHS = {
+  sun: <><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.9 4.9 1.4 1.4"/><path d="m17.7 17.7 1.4 1.4"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.3 17.7-1.4 1.4"/><path d="m19.1 4.9-1.4 1.4"/></>,
+  moon: <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>,
+  monitor: <><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8"/><path d="M12 16v4"/></>,
   home: <><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></>,
   checkSquare: <><rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 3 3 5-6"/></>,
   list: <><path d="M9 6h12"/><path d="M9 12h12"/><path d="M9 18h12"/><path d="M4 6h.01"/><path d="M4 12h.01"/><path d="M4 18h.01"/></>,
@@ -1449,6 +1452,36 @@ function SyncPill({ state }) {
     </span>
   );
 }
+function useThemeMode() {
+  const read = () => { const m = safeGet('tm-theme'); return m === 'light' || m === 'dark' ? m : 'system'; };
+  const [mode, setMode] = useState('system');
+  useEffect(() => {
+    setMode(read());
+    const h = () => setMode(read());
+    window.addEventListener('tm-theme', h);
+    return () => window.removeEventListener('tm-theme', h);
+  }, []);
+  const choose = (m) => {
+    setMode(m);
+    if (window.__tmTheme) window.__tmTheme(m); else safeSet('tm-theme', m);
+  };
+  return [mode, choose];
+}
+function ThemeSwitch() {
+  const [mode, choose] = useThemeMode();
+  const opts = [{ key: 'light', icon: 'sun', label: 'Light' }, { key: 'dark', icon: 'moon', label: 'Dark' }, { key: 'system', icon: 'monitor', label: 'System' }];
+  return (
+    <div role="group" aria-label="Theme" className="flex items-center gap-0.5 p-0.5 rounded-xl bg-slate-100">
+      {opts.map(o => (
+        <button key={o.key} onClick={() => choose(o.key)} title={o.label} aria-label={o.label} aria-pressed={mode === o.key}
+          className={`p-2 rounded-[10px] transition-colors ${mode === o.key ? 'bg-purple text-white shadow-card' : 'text-slateText hover:text-navy'}`}>
+          <Icon name={o.icon} size={16} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function Header({ appMode, view, onOpenMobile, searchQuery, setSearchQuery, tasks, reminders, user, onGoSettings, onUndo, onRedo, canUndo, canRedo, undoLabel, redoLabel, syncState }) {
   const titleMap = { dashboard: 'Dashboard', today: "Today's Tasks", all: 'All Tasks', calendar: 'Calendar', completed: 'Completed Tasks', pending: 'Pending Tasks', notes: 'Notes', summary: 'Summary', settings: 'Settings' };
   const [mobileSearch, setMobileSearch] = useState(false);
@@ -1474,17 +1507,7 @@ function Header({ appMode, view, onOpenMobile, searchQuery, setSearchQuery, task
         </div>
         <button onClick={() => setMobileSearch(s => !s)} className="md:hidden p-2.5 rounded-xl text-slateText hover:bg-slate-100"><Icon name="search" size={18} /></button>
         <SyncPill state={syncState} />
-        {/* Undo / redo for task changes — also on Ctrl+Z and Ctrl+Y. */}
-        <div className="flex items-center gap-0.5">
-          <button onClick={onUndo} disabled={!canUndo} title={canUndo && undoLabel ? `Undo: ${undoLabel} (Ctrl+Z)` : 'Undo (Ctrl+Z)'} aria-label="Undo"
-            className="p-2.5 rounded-xl text-slateText hover:text-navy hover:bg-slate-100 transition-colors disabled:opacity-35 disabled:hover:bg-transparent disabled:cursor-not-allowed">
-            <Icon name="undo" size={18} />
-          </button>
-          <button onClick={onRedo} disabled={!canRedo} title={canRedo && redoLabel ? `Redo: ${redoLabel} (Ctrl+Y)` : 'Redo (Ctrl+Y)'} aria-label="Redo"
-            className="p-2.5 rounded-xl text-slateText hover:text-navy hover:bg-slate-100 transition-colors disabled:opacity-35 disabled:hover:bg-transparent disabled:cursor-not-allowed">
-            <Icon name="redo" size={18} />
-          </button>
-        </div>
+        <ThemeSwitch />
         <NotificationDropdown tasks={tasks} reminders={reminders} />
         <button onClick={onGoSettings} title="My Profile" className="rounded-full hover:ring-2 hover:ring-purpleLight/40 transition-all">
           <Avatar user={user} size={36} />
@@ -2302,12 +2325,7 @@ const THEME_OPTIONS = [
 
 function SettingsPage({tasks, onClearAll, user, onLogout, onUpdateUser, onChangePassword }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [themeMode, setThemeMode] = useState('system');
-  useEffect(() => { const m = safeGet('tm-theme'); if (m === 'light' || m === 'dark') setThemeMode(m); }, []);
-  const chooseTheme = (m) => {
-    setThemeMode(m);
-    if (typeof window !== 'undefined' && window.__tmTheme) window.__tmTheme(m); else safeSet('tm-theme', m);
-  };
+  const [themeMode, chooseTheme] = useThemeMode();
   const total = tasks.length;
   const completed = tasks.filter(t => t.status === 'completed').length;
   return (
