@@ -140,3 +140,62 @@ html.tm-app header .gap-1\.5 { gap: .15rem; }
 
 /* Website: the same notice ("File added", upload errors) sits bottom-right */
 html:not(.tm-app) .tm-app-notice { left: auto; right: 1.5rem; bottom: 1.5rem; max-width: 26rem; }
+
+/* =====================================================================
+   Dark theme — <html class="dark"> (set from app/layout.tsx THEME_SCRIPT,
+   chosen in Settings → Appearance). Deep navy page, royal-navy gradient
+   cards with a soft light border. Light mode is untouched.
+   ===================================================================== */
+:root { --tm-track: #E2E8F0; }
+html.dark { --tm-track: rgba(255, 255, 255, .14); color-scheme: dark; }
+html.dark, html.dark body { background: #060f28; }
+html.dark body { color: #E8EEF9; }
+html.dark ::-webkit-scrollbar-thumb { background: #2a3f73; }
+html.dark button:focus-visible, html.dark input:focus-visible, html.dark [tabindex]:focus-visible { outline-color: #A78BFA; }
+
+/* surfaces: page, cards, modals, dropdowns */
+html.dark .bg-bg { background-color: #060f28; }
+html.dark .bg-white {
+  background-color: #0f2150;
+  background-image: linear-gradient(135deg, #0a1a42 0%, #12295c 55%, #1a3572 100%);
+  border-color: rgba(255, 255, 255, .1);
+}
+html.dark .bg-white\/90 { background-color: rgba(6, 15, 40, .88); }
+html.dark .bg-slate-50, html.dark .bg-slate-50\/70, html.dark .hover\:bg-slate-50:hover { background-color: rgba(255, 255, 255, .05); }
+html.dark .bg-slate-100, html.dark .hover\:bg-slate-100:hover { background-color: rgba(255, 255, 255, .09); }
+html.dark .bg-slate-200 { background-color: rgba(255, 255, 255, .16); }
+html.dark .bg-navy\/5 { background-color: rgba(255, 255, 255, .06); }
+html.dark input.bg-bg, html.dark select.bg-bg, html.dark textarea.bg-bg, html.dark .bg-bg\/70 { background-color: rgba(4, 10, 30, .55); }
+html.dark input.focus\:bg-white:focus, html.dark select.focus\:bg-white:focus, html.dark textarea.focus\:bg-white:focus { background-color: rgba(4, 10, 30, .85); background-image: none; }
+html.dark select.bg-white, html.dark input.bg-white, html.dark textarea.bg-white { background-image: none; background-color: #0c1b45; }
+html.dark select option { background: #0c1b45; color: #E8EEF9; }
+html.dark .shadow-card { box-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 24px -14px rgba(0, 0, 0, .6); }
+html.dark .shadow-pop { box-shadow: 0 16px 40px rgba(0, 0, 0, .55); }
+html.dark .tm-grid-light { background-image: linear-gradient(rgba(255, 255, 255, .08) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .08) 1px, transparent 1px); }
+
+/* lines + text */
+html.dark .border-line, html.dark .border-slate-300 { border-color: rgba(255, 255, 255, .1); }
+html.dark .text-ink, html.dark .text-navy, html.dark .hover\:text-navy:hover { color: #E8EEF9; }
+html.dark .text-slateText, html.dark .hover\:text-slateText:hover { color: #9FB0CF; }
+html.dark .text-slate-400 { color: #8191B2; }
+html.dark .text-slate-300 { color: #5f7099; }
+html.dark .text-purple, html.dark .hover\:text-purple:hover { color: #B8A3FB; }
+html.dark .placeholder\:text-slate-400::placeholder { color: #6f80a6; }
+
+/* status colours */
+html.dark .text-emerald-700 { color: #6ee7b7; }
+html.dark .text-emerald-600 { color: #34d399; }
+html.dark .text-rose-600, html.dark .text-red-500, html.dark .hover\:text-rose-500:hover { color: #fb8a9a; }
+html.dark .text-amber-700 { color: #fcd34d; }
+html.dark .bg-emerald-100 { background-color: rgba(16, 185, 129, .2); }
+html.dark .bg-emerald-50 { background-color: rgba(16, 185, 129, .12); }
+html.dark .bg-red-50, html.dark .bg-rose-50, html.dark .hover\:bg-red-50:hover, html.dark .hover\:bg-rose-50:hover { background-color: rgba(244, 63, 94, .14); }
+html.dark .bg-amber-50 { background-color: rgba(245, 158, 11, .14); }
+html.dark .border-red-200 { border-color: rgba(251, 113, 133, .35); }
+
+/* app bottom bar sheet */
+html.dark .tm-more-sheet { background: #0c1b45; box-shadow: 0 -12px 32px rgba(0, 0, 0, .6); }
+html.dark .tm-more-handle { background: rgba(255, 255, 255, .18); }
+html.dark .tm-more-item { background: rgba(255, 255, 255, .07); color: #E8EEF9; }
+html.dark .tm-more-item.is-active { background: rgba(167, 139, 250, .16); box-shadow: inset 0 0 0 2px #A78BFA; }
+html.dark .tm-bottom-nav { box-shadow: 0 10px 30px rgba(0, 0, 0, .6), inset 0 0 0 1px rgba(255, 255, 255, .08); }

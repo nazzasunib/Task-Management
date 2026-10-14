@@ -481,7 +481,7 @@ function ProgressBar({ value, className = '' }) {
     </div>
   );
 }
-function RingProgress({ value, size = 60, stroke = 6, textClass = 'text-ink', track = '#E2E8F0' }) {
+function RingProgress({ value, size = 60, stroke = 6, textClass = 'text-ink', track = 'var(--tm-track)' }) {
   const r = (size - stroke) / 2, c = 2 * Math.PI * r;
   const offset = c - (Math.min(100, value) / 100) * c;
   return (
@@ -2294,8 +2294,20 @@ function ReminderSettingsCard({ user, onUpdateUser }) {
   );
 }
 
-function SettingsPage({ tasks, onClearAll, user, onLogout, onUpdateUser, onChangePassword }) {
+const THEME_OPTIONS = [
+  { key: 'light', label: 'Light', bg: '#F8FAFC', card: '#FFFFFF' },
+  { key: 'dark', label: 'Dark', bg: '#060f28', card: 'linear-gradient(135deg,#0a1a42,#24448a)' },
+  { key: 'system', label: 'System' },
+];
+
+function SettingsPage({tasks, onClearAll, user, onLogout, onUpdateUser, onChangePassword }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [themeMode, setThemeMode] = useState('system');
+  useEffect(() => { const m = safeGet('tm-theme'); if (m === 'light' || m === 'dark') setThemeMode(m); }, []);
+  const chooseTheme = (m) => {
+    setThemeMode(m);
+    if (typeof window !== 'undefined' && window.__tmTheme) window.__tmTheme(m); else safeSet('tm-theme', m);
+  };
   const total = tasks.length;
   const completed = tasks.filter(t => t.status === 'completed').length;
   return (
@@ -2305,14 +2317,22 @@ function SettingsPage({ tasks, onClearAll, user, onLogout, onUpdateUser, onChang
       <ChangePasswordCard user={user} onChangePassword={onChangePassword} />
       <div className="bg-white border border-line rounded-2xl p-5 shadow-card">
         <h3 className="font-display font-semibold text-ink mb-1">Appearance</h3>
-        <p className="text-sm text-slateText mb-4">Task Management uses a fixed Royal Navy &amp; Purple identity for a consistent, professional look.</p>
-        <div className="flex gap-3">
-          {[{ c: '#0B1F3A', l: 'Navy' }, { c: '#7C3AED', l: 'Purple' }, { c: '#A78BFA', l: 'Light Purple' }, { c: '#F8FAFC', l: 'Background' }].map(s => (
-            <div key={s.l} className="flex flex-col items-center gap-1.5">
-              <div className="w-10 h-10 rounded-xl border border-line" style={{ background: s.c }} />
-              <span className="text-[11px] text-slateText">{s.l}</span>
-            </div>
-          ))}
+        <p className="text-sm text-slateText mb-4">Choose Light, Dark, or follow your device (System). Royal Navy &amp; Purple stay the identity in every mode.</p>
+        <div className="grid grid-cols-3 gap-3">
+          {THEME_OPTIONS.map(o => {
+            const on = themeMode === o.key;
+            return (
+              <button key={o.key} onClick={() => chooseTheme(o.key)} aria-pressed={on}
+                className={`rounded-xl border-2 p-2 text-left transition-colors ${on ? 'border-purple' : 'border-line hover:border-purpleLight'}`}>
+                <div className="h-14 rounded-lg overflow-hidden border border-line flex" style={{ background: o.key === 'system' ? undefined : o.bg }}>
+                  {o.key === 'system'
+                    ? <><div className="w-1/2 h-full" style={{ background: '#F8FAFC' }} /><div className="w-1/2 h-full" style={{ background: '#060f28' }} /></>
+                    : <div className="m-2 flex-1 rounded-md" style={{ background: o.card }} />}
+                </div>
+                <div className={`mt-2 text-sm font-medium ${on ? 'text-purple' : 'text-ink'}`}>{o.label}</div>
+              </button>
+            );
+          })}
         </div>
       </div>
       <div className="bg-white border border-line rounded-2xl p-5 shadow-card">
