@@ -875,7 +875,9 @@ function TaskFormModal({ open, onClose, onSubmit, initial, defaultDate, taskCoun
           <h2 className="font-display font-bold text-lg text-ink">{initial ? 'Edit Task' : 'Add New Task'}</h2>
           <IconButton icon="x" label="Close" onClick={onClose} />
         </div>
-        <div className="space-y-4">
+        <div className="space-y-4" onKeyDown={e => {
+          if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.target.tagName === 'INPUT' && e.target.type !== 'file' && e.target.type !== 'checkbox') { e.preventDefault(); submit(); }
+        }}>
           <Field label="Task Title">
             <input autoFocus className={inputCls} placeholder="e.g. Finish quarterly report"
               value={title} onChange={e => setTitle(e.target.value)} />
