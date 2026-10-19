@@ -3472,6 +3472,23 @@ function ConfigMissing() {
   );
 }
 
+// A spare copy of the login, so a surprise sign-out (refresh race, bad network) can be undone quietly.
+const AUTH_BACKUP_KEY = 'tm-auth-backup';
+const saveAuthBackup = (s) => { try { if (s && s.refresh_token) localStorage.setItem(AUTH_BACKUP_KEY, JSON.stringify({ refresh_token: s.refresh_token })); } catch (e) {} };
+const clearAuthBackup = () => { try { localStorage.removeItem(AUTH_BACKUP_KEY); } catch (e) {} };
+// returns a session, 'offline' (keep the person in the app), or null (really signed out)
+async function restoreSession(sb) {
+  let b = null;
+  try { b = JSON.parse(localStorage.getItem(AUTH_BACKUP_KEY) || 'null'); } catch (e) {}
+  if (!b || !b.refresh_token) return null;
+  try {
+    const { data, error } = await sb.auth.refreshSession({ refresh_token: b.refresh_token });
+    if (data && data.session) return data.session;
+    if (error && (isOfflineError(error) || !error.status || error.status >= 500)) return 'offline';
+  } catch (e) { if (isOfflineError(e)) return 'offline'; }
+  return null;
+}
+
 function App() {
   const [phase, setPhase] = useState('boot'); // boot | auth | recovery | ready | error
   const [bootError, setBootError] = useState('');
@@ -3481,6 +3498,7 @@ function App() {
   const storeRef = useRef(null);
   const remote = useMemo(() => ({ tasks: null, notes: null }), []);
   const bootedFor = useRef(null);
+  const manualLogout = useRef(false);
 
   const boot = useCallback(async (authUser) => {
     if (bootedFor.current === authUser.id) return;
@@ -3562,13 +3580,33 @@ function App() {
         if (slow) clearTimeout(slow);
         if (settled || recovering) return;
         settled = true;
-        if (session) { boot(session.user); return; }
-        if (saved && error) bootOffline(); else setPhase('auth');
+        if (session) { saveAuthBackup(session); boot(session.user); return; }
+        if (saved && error) { bootOffline(); return; }
+        // no login found but one was saved before: try to get it back before asking for a password
+        restoreSession(sb).then(r => {
+          if (r && r !== 'offline') { saveAuthBackup(r); boot(r.user); }
+          else if (r === 'offline' && saved) bootOffline();
+          else setPhase('auth');
+        });
       });
     }
     const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') { recovering = true; setPhase('recovery'); return; }
+      if (session) saveAuthBackup(session);
+      if (event === 'SIGNED_OUT' && !manualLogout.current && !recovering) {
+        // the person did not ask for this: try to restore the login quietly first
+        setTimeout(async () => {
+          const r = await restoreSession(sb);
+          if (r) { if (r !== 'offline') saveAuthBackup(r); return; }
+          clearAuthBackup();
+          bootedFor.current = null;
+          if (storeRef.current) { storeRef.current.destroy(); storeRef.current = null; }
+          setUser(null); setData(null); setPhase('auth');
+        }, 600);
+        return;
+      }
       if (event === 'SIGNED_OUT') {
+        clearAuthBackup();
         bootedFor.current = null;
         if (storeRef.current) { storeRef.current.destroy(); storeRef.current = null; }
         clearOfflineData();
@@ -3616,6 +3654,8 @@ function App() {
       if (!ok) return;
     }
     const sb = getSupabase();
+    manualLogout.current = true;
+    clearAuthBackup();
     const res = await sb.auth.signOut();
     if (res && res.error) await sb.auth.signOut({ scope: 'local' });
   }, []);
@@ -3666,7 +3706,7 @@ function App() {
             <h1 className="font-display font-bold text-lg text-ink mb-1.5">Couldn't load your workspace</h1>
             <p className="text-sm text-slateText mb-5">{bootError}</p>
             <button onClick={() => window.location.reload()} className="w-full bg-purple hover:bg-purple/90 text-white text-sm font-semibold px-4 py-2.5 rounded-xl mb-2">Try again</button>
-            <button onClick={() => { getSupabase().auth.signOut().catch(() => {}).finally(() => window.location.reload()); }} className="w-full border border-line text-ink text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-slate-50">Log out</button>
+            <button onClick={() => { clearAuthBackup(); getSupabase().auth.signOut().catch(() => {}).finally(() => window.location.reload()); }} className="w-full border border-line text-ink text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-slate-50">Log out</button>
           </div>
         </div>
       );
