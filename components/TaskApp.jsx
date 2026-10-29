@@ -1320,6 +1320,7 @@ function AuthPage({ recovery = false, onRecovered }) {
                 <div className="flex justify-end -mt-1"><button type="button" onClick={() => switchMode('forgot')} className="text-xs font-semibold text-purple hover:underline">Forgot password?</button></div>
               )}
               {error && <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5 animate-pop">{error}</p>}
+              {mode === 'login' && readAuthLog().length > 0 && <p className="text-[11px] text-slateText bg-slate-50 rounded-xl px-3 py-2 whitespace-pre-line">Why was I logged out?{'\n' + readAuthLog().join('\n')}</p>}
               {info && <p className="text-sm text-emerald-700 bg-emerald-50 rounded-xl px-3.5 py-2.5 animate-pop">{info}</p>}
               <button type="submit" disabled={busy} className="tm-btn-primary w-full h-12 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-70">
                 {busy && <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />}
@@ -3475,6 +3476,8 @@ function ConfigMissing() {
 // A spare copy of the login, so a surprise sign-out (refresh race, bad network) can be undone quietly.
 const AUTH_BACKUP_KEY = 'tm-auth-backup';
 const saveAuthBackup = (s) => { try { if (s && s.refresh_token) localStorage.setItem(AUTH_BACKUP_KEY, JSON.stringify({ refresh_token: s.refresh_token })); } catch (e) {} };
+const logAuth = (msg) => { try { const a = JSON.parse(localStorage.getItem('tm-auth-log') || '[]'); a.push(new Date().toLocaleString() + ' · ' + msg); localStorage.setItem('tm-auth-log', JSON.stringify(a.slice(-6))); } catch (e) {} };
+const readAuthLog = () => { try { return JSON.parse(localStorage.getItem('tm-auth-log') || '[]'); } catch (e) { return []; } };
 const clearAuthBackup = () => { try { localStorage.removeItem(AUTH_BACKUP_KEY); } catch (e) {} };
 // returns a session, 'offline' (keep the person in the app), or null (really signed out)
 async function restoreSession(sb) {
@@ -3484,6 +3487,7 @@ async function restoreSession(sb) {
   try {
     const { data, error } = await sb.auth.refreshSession({ refresh_token: b.refresh_token });
     if (data && data.session) return data.session;
+    if (error) logAuth('restore failed: ' + (error.message || error.status));
     if (error && (isOfflineError(error) || !error.status || error.status >= 500)) return 'offline';
   } catch (e) { if (isOfflineError(e)) return 'offline'; }
   return null;
@@ -3540,7 +3544,7 @@ function App() {
       if (profileRes.online) saveOfflineUser(authUser, p);
       if (profileRes.online && !p.seeded) {
         // New accounts start empty — no demo/welcome tasks.
-        await sb.from('tm_profiles').upsert({ id: authUser.id, seeded: true, full_name: p.full_name || authUser.user_metadata?.full_name || (authUser.email || '').split('@')[0], email: authUser.email || '' });
+        try { await sb.from('tm_profiles').upsert({ id: authUser.id, seeded: true, full_name: p.full_name || authUser.user_metadata?.full_name || (authUser.email || '').split('@')[0], email: authUser.email || '' }); } catch (e) { /* not critical: the app opens without it */ }
       }
       storeRef.current = store;
       setUser({
@@ -3557,7 +3561,7 @@ function App() {
       store.subscribe();
     } catch (err) {
       bootedFor.current = null;
-      setBootError(friendlyError(err));
+      setBootError(friendlyError(err) + (err && (err.message || err.code) ? '  [' + (err.code || '') + ' ' + String(err.message || '').slice(0, 140) + ']' : ''));
       setPhase('error');
     }
   }, [remote]);
@@ -3593,6 +3597,7 @@ function App() {
     const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') { recovering = true; setPhase('recovery'); return; }
       if (session) saveAuthBackup(session);
+      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') logAuth(event + (manualLogout.current ? ' (by user)' : ''));
       if (event === 'SIGNED_OUT' && !manualLogout.current && !recovering) {
         // the person did not ask for this: try to restore the login quietly first
         setTimeout(async () => {
