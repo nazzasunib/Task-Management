@@ -296,7 +296,7 @@ function buildSummaryRange(tasks, from, to) {
   // "Late" = finished but only after rolling over at least once. Best proxy the data model supports.
   const onTime = completedTasks.filter(t => t.rolloverCount === 0).length;
   const late = completedTasks.length - onTime;
-  return { byDate, dates, total: inRange.length, completed: completedTasks.length, onTime, late };
+  return { byDate, dates, list: inRange, total: inRange.length, completed: completedTasks.length, onTime, late };
 }
 function statusLabel(t) {
   if (t.status === 'completed') return 'Completed';
@@ -2177,7 +2177,7 @@ function SummaryPage({ tasks, user }) {
         {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
       </div>
 
-      <StatsRow tasks={Object.values(summary.byDate).flat()} />
+      <StatsRow tasks={summary.list} />
 
       <OnTimeLateBar completed={summary.completed} onTime={summary.onTime} late={summary.late} />
 
